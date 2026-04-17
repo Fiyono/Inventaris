@@ -1,3 +1,59 @@
+<link rel="stylesheet" href="assets/css/custom.css">
+<style>
+    /* Header tabel */
+    #example1 thead th {
+        background: linear-gradient(45deg, #007bff, #00c6ff);
+        color: white;
+        text-align: center;
+        font-size: 13px;
+        padding: 10px;
+    }
+
+    /* Isi tabel */
+    #example1 tbody td {
+        font-size: 12px;
+        text-align: center;
+        vertical-align: middle;
+        transition: all 0.3s ease;
+    }
+
+    /* Hover baris */
+    #example1 tbody tr:hover {
+        background-color: #f1f9ff !important;
+        transform: scale(1.01);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    /* Zebra stripes */
+    #example1 tbody tr:nth-child(even) {
+        background-color: #fafafa;
+    }
+
+    /* Efek animasi muncul */
+    #example1 tbody tr {
+        animation: fadeIn 0.4s ease-in;
+    }
+    @keyframes fadeIn {
+        from {opacity: 0; transform: translateY(5px);}
+        to {opacity: 1; transform: translateY(0);}
+    }
+
+    /* Badge aktivitas */
+    .badge-ambil {
+        background-color: #28a745;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+    }
+    .badge-kembali {
+        background-color: #ffc107;
+        color: black;
+        padding: 4px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+    }
+</style>
 <div class="row">
 	<div class="col-sm-12">
 		<div class="card">
@@ -5,23 +61,49 @@
 				<h6 class="card-title text-bold float-left">Daftar Tiket Masuk</h6>
 			</div>
 			<div class="card-body">
+
+                <!-- Tambahkan CSS langsung di sini -->
+                <style>
+                    /* Styling header tabel */
+                    #example1 th {
+                        font-size: 13px;     /* ukuran font header */
+                        font-weight: bold;   /* biar tebal */
+                        text-align: center;  /* rata tengah */
+                        background-color: #f8f9fa; /* opsional warna header */
+                    }
+
+                    /* Styling isi tabel */
+                    #example1 td {
+                        font-size: 12px;     /* ukuran font isi */
+                        text-align: center;  /* rata tengah */
+                        padding: 12px;       /* biar lebih lega */
+                    }
+
+                    /* Khusus kolom NO */
+                    #example1 th:first-child,
+                    #example1 td:first-child {
+                        font-size: 13px;     /* lebih kecil */
+                        width: 60px;         /* atur lebar NO */
+                    }
+					
+                </style>
 				<table id="example1" class="table table-sm table-bordered table-hover">
 					<thead>
 						<tr>
-							<th>ID Tiket</th>
-							<th>User Peminjam</th>
-							<th>Nama Barang</th>
-							<th>Jumlah</th>
-							<th>Status</th>
-							<th>Tujuan Penggunaan</th>
-							<th>Tgl Tiket</th>
-							<th>Tgl Perkiraan Kembali</th>
-							<th>Aksi Admin</th>
+							<th>NO</th>
+							<th>NAMA PEMINJAM</th>
+							<th>NAMA BARANG</th>
+							<th>JUMLAH</th>
+							<th>STATUS</th>
+							<th>TUJUAN PENGGUNAAN</th>
+							<th>TANGGAL PINJAM</th>
+							<th>TANGGAL KEMBALI</th>
+							<th>KETERANGAN</th>
 						</tr>
 					</thead>
 					<tbody>
 						<?php 
-						$sql = mysqli_query($koneksi, "select * from tbl_tiketuser x left join tbl_barang y on y.id_brg = x.id_brg left join tb_user z on z.id_user = x.id_user group by id_tiketuser desc");
+						$sql = mysqli_query($koneksi, "select * from tbl_tiketuser x left join tbl_barang  y on y.id_brg = x.id_brg left join tb_user z on z.id_user = x.id_user group by id_tiketuser desc");
 						while ($row = mysqli_fetch_array($sql)) {
 							?>
 							<tr>
@@ -50,7 +132,7 @@
 							  <div class="modal-dialog">
 							    <div class="modal-content bg-indigo">
 							      <div class="modal-header">
-							        <h6 class="modal-title"><i class="fas fa-angle-double-up"></i> Aksi Admin</h6>
+							        <h6 class="modal-title"><i class="fas fa-angle-double-up"></i> AKSI ADMIN</h6>
 							        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
 							          <span aria-hidden="true">&times;</span></button>
 							      </div>
@@ -60,10 +142,10 @@
 							        		<input type="text" name="id_tiketuser" value="<?= $row['id_tiketuser']; ?>">
 							        	</div>
 							        	<div class="form-group">
-							        		<label for="tindakan">Tindakan</label>
+							        		<label for="tindakan">TINDAKAN</label>
 							        		<select class="select2 form-control form-control-sm" name="status">
-							        			<option value="disetujui">Setujui</option>
-							        			<option value="dibatalkan">Batalkan</option>
+							        			<option value="disetujui">SETUJU</option>
+							        			<option value="dibatalkan">BATALKAN</option>
 							        		</select>
 							        	</div>
 							        	<div class="form-group">

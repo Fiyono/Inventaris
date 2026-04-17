@@ -1,0 +1,211 @@
+/* style_profile.css - Minimalist Modern */
+
+/* --- Font & Global Styles --- */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+:root {
+    --primary-gradient: linear-gradient(135deg, #1b262c, #0f4c75);
+    --secondary-gradient: linear-gradient(135deg, #3282b8, #bbe1fa);
+    --card-bg: rgba(255, 255, 255, 0.9);
+    --text-color: #333;
+    --light-text: #fff;
+    --shadow-soft: 0 5px 15px rgba(0, 0, 0, 0.05);
+    --shadow-deep: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background: var(--secondary-gradient);
+    color: var(--text-color);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+}
+
+.container {
+    width: 100%;
+    max-width: 900px;
+}
+
+/* --- Profile Card --- */
+.profile-card {
+    background: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
+    position: relative;
+    text-align: center;
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.profile-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-deep);
+}
+
+.profile-header {
+    background: var(--primary-gradient);
+    color: var(--light-text);
+    padding: 3rem 1.5rem 6rem;
+    position: relative;
+}
+
+.profile-header h2 {
+    font-weight: 700;
+    font-size: 2.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.edit-name-btn {
+    color: var(--secondary-gradient); /* Warna dari gradien kedua */
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.edit-name-btn:hover {
+    transform: scale(1.1);
+}
+
+.profile-image-container {
+    position: absolute;
+    bottom: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 5px solid var(--card-bg);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.4s ease;
+}
+
+.profile-image-container:hover {
+    transform: translateX(-50%) scale(1.1);
+}
+
+.profile-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: filter 0.3s ease;
+}
+
+.profile-image:hover {
+    filter: brightness(1.1) contrast(1.1);
+}
+
+/* --- Profile Details Grid --- */
+.profile-details {
+    padding: 6.5rem 2.5rem 2.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.detail-item {
+    background: transparent;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: left;
+    transition: all 0.3s ease;
+}
+
+.detail-item:hover {
+    background-color: #f8f9fa;
+    border-color: #ddd;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+.detail-item strong {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.detail-item p, .detail-item input, .detail-item textarea {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--text-color);
+}
+
+/* --- Action Button --- */
+.profile-actions {
+    padding: 1rem 2.5rem 2.5rem;
+}
+
+.profile-actions .btn {
+    background: var(--primary-gradient);
+    color: var(--light-text);
+    border: none;
+    padding: 14px 30px;
+    border-radius: 50px;
+    font-weight: 500;
+    font-size: 1.1rem;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* --- Modal Styles --- */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    padding: 2.5rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow-deep);
+    width: 90%;
+    max-width: 500px;
+    animation: modal-fade-in 0.4s ease-out;
+}
+
+@keyframes modal-fade-in {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header h3 {
+    color: var(--text-color);
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.btn-close {
+    background-color: #e9ecef;
+    color: var(--text-color);
+}
+
+.btn-save {
+    background: var(--primary-gradient);
+    color: var(--light-text);
+}

@@ -1,455 +1,210 @@
-<?php 
-session_start();
+<?php
+// Session aman
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Cek login
+if (!isset($_SESSION['agent']) || !isset($_SESSION['id_user'])) {
+    header("Location: login.php");
+    exit;
+}
+
 include "koneksi.php";
-if (!isset($_SESSION['agent']) && !isset($_SESSION['id_user'])) {
-  echo "<script>document.location.href = 'login.php';</script>";
-}
 
-$query = mysqli_query($koneksi, "select * from user_agent x inner join tb_user y on y.id_user = x.id_user 
-inner join dompet_user z on z.id_user = y.id_user where name_user_agent = '".$_SESSION['agent']."' and x.id_user = '".$_SESSION['id_user']."' group by x.id_user asc");
-$user = mysqli_fetch_array($query);
+// Ambil data user
+$id_user = $_SESSION['id_user'];
+$agent_name = $_SESSION['agent'];
 
-if ($user['id_level'] != '2') {
-  echo "<script>document.location.href = 'logout.php';</script>";
-}
+// Query user tunggal
+$query = mysqli_query($koneksi, "
+    SELECT y.*, x.name_user_agent, 0 as saldo
+    FROM user_agent x
+    INNER JOIN tb_user y ON y.id_user = x.id_user
+    WHERE x.name_user_agent='$agent_name'
+    AND x.id_user='$id_user'
+    LIMIT 1
+");
+$user = mysqli_fetch_assoc($query) ?? [];
 
+// Fungsi rupiah
 function rupiah($angka){
-  $hasil_rupiah = "Rp. " . number_format($angka, 2 ,',','.');
-  return $hasil_rupiah;
+    return "Rp. " . number_format($angka, 2, ',', '.');
+}
+
+// Set default background kelas footer menu
+$bgh = $bgr = $bgrp = $bgp = 'bg-white';
+$page = $_GET['page'] ?? 'home';
+switch($page){
+    case 'home': $bgh='bg-dark'; break;
+    case 'riwayat_trx': $bgr='bg-dark'; break;
+    case 'riwayat_pinjam': $bgrp='bg-dark'; break;
+    case 'profile': $bgp='bg-dark'; break;
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="x-ua-compatible" content="ie=edge">
-
-  <title>Inventaris</title>
+  <title>INVENTARIS</title>
   <link rel="icon" href="dist/img/logoinventaris.jpg">
-
-  <link rel="stylesheet" type="text/css" href="dist/css/style.css">
-  <!-- Font Awesome Icons -->
-  <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
-  <!-- overlayScrollbars -->
-  <link rel="stylesheet" href="plugins/overlayScrollbars/css/OverlayScrollbars.min.css">
-  <!-- Theme style -->
   <link rel="stylesheet" href="dist/css/adminlte.min.css">
-  <!-- Google Font: Source Sans Pro -->
-  <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
-
-    <!-- DataTables -->
+  <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
+  <link rel="stylesheet" href="plugins/select2/css/select2.min.css">
   <link rel="stylesheet" href="plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
   <link rel="stylesheet" href="plugins/datatables-responsive/css/responsive.bootstrap4.min.css">
-    <!-- Select2 -->
-  <link rel="stylesheet" href="plugins/select2/css/select2.min.css">
-
-  <!-- Add the evo-calendar.css for styling -->
-<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/evo-calendar@1.1.2/evo-calendar/css/evo-calendar.min.css"/>
-
-  <!-- SweetAlert2 -->
-  <link rel="stylesheet" href="plugins/sweetalert2-theme-bootstrap-4/bootstrap-4.min.css">
-
-<style type="text/css">
-  .bg-nav{
-    background-image: linear-gradient(#6495ED, #6495ED);
-  }
-  .bg-radian{
-    background-image: linear-gradient(white, #6495ED);
-  }
-  .bg-foot{
-    background-image: linear-gradient(#6495ED, #6495ED)
-  }
-  .bg-abu{
-    background-color: #6495ED;
-  }
-  .text-abu{
-    color: #6495ED;
-  }
-</style>
-
+  <style>
+    .bg-nav{background-image: linear-gradient(#6495ED,#6495ED);}
+    .bg-radian{background-image: linear-gradient(white,#6495ED);}
+    .bg-foot{background-image: linear-gradient(#6495ED,#6495ED);}
+    .bg-abu{background-color: #6495ED;}
+    .text-abu{color:#6495ED;}
+  </style>
 </head>
-<body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed layout-footer-fixed" onload="myFunction()" style="margin: 0;">
-<div id="loader"></div>
+<body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed layout-footer-fixed">
 <div class="wrapper">
+
   <!-- Navbar -->
   <nav class="main-header navbar navbar-expand bg-nav navbar-primary elevation-1">
-    <!-- Left navbar links -->
     <ul class="navbar-nav">
       <li class="nav-item">
         <a class="btn bg-white elevation-1 img-circle" data-widget="pushmenu">
-          <i class="fas fa-wallet text-abu"></i> <!-- <h6 class="text-primary">Saldo</h6> -->
+          <i class="fas fa-wallet text-abu"></i>
         </a>
       </li>
       <li class="nav-item d-lg-inline-block">
-        <h4><a href="anggota.php?page=profile" class="nav-link text-bold text-white"><?= $user['user']; ?></a></h4>
+        <h4><a href="anggota.php?page=profile" class="nav-link text-bold text-white">
+          <?= $user['nama_lengkap'] ?? $user['name_user_agent'] ?? 'User'; ?>
+        </a></h4>
       </li>
     </ul>
-
-    <!-- SEARCH FORM -->
-
-
   </nav>
-  <!-- /.navbar -->
 
-  <!-- Main Sidebar Container -->
+  <!-- Sidebar -->
   <aside class="main-sidebar bg-radian text-bold text-white elevation-1">
-    <!-- Brand Logo -->
     <a href="?page=home" class="brand-link">
-      <img src="dist/img/logoinventaris.jpg" alt="AdminLTE Logo" class="brand-image"
-           style="opacity: .8;" width="120" height="40">
-      <span class="brand-text bold text-dark">Inventaris</span>
+      <img src="dist/img/logoinventaris.jpg" alt="Logo" class="brand-image" style="opacity:.8;" width="120" height="40">
+      <span class="brand-text bold text-dark">INVENTARIS</span>
     </a>
-
-    <!-- Sidebar -->
     <div class="sidebar">
-
-      <!-- Sidebar Menu -->
       <nav class="mt-2">
-        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-          <!-- Add icons to the links using the .nav-icon class
-               with font-awesome or any other icon font library -->
-          <!-- <li class="nav-item has-treeview menu-open">
-            <a href="?page=message<file sudah dihapus>" class="nav-link active">
-              <i class="nav-icon fas fa-envelope"></i>
-              <p>
-                Message
-              </p>
-            </a>
-          </li> -->
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview">
           <li class="nav-item">
             <a href="logout.php" class="nav-link text-dark">
               <i class="nav-icon fas fa-sign-out-alt"></i>
-              <p>Logout</p>
+              <p>LOGOUT</p>
             </a>
-          </li>
-        </ul>
-        <div class="row">
-          <div class="col-md-12 col-sm-6 col-12">
-            <a href="use_chatgroup.php" class="text-dark">
-            <div class="info-box callout callout-grey">
-              <span class="info-box-icon text-orange elevation-1"><i class="far fa-comments"></i></span>
-
-              <div class="info-box-content">
-                <div class="direct-chat-msg">
-                  <div class="direct-chat text-sm text-left" id="showone">
-                    <!-- show limit 1 -->
-                  </div>  
-                </div>  
-                <div class="progress">
-                  <div class="progress-bar" style="width: 70%"></div>
-                </div>
-                <span class="progress-description">
-                  Chat group
-                </span> 
-              </div>
-             </div>
-            <!-- /.info-box -->
-          </a>
-          </div>
-          <!-- /.col -->
-        </div>
-      </nav>
-      
-      <!-- /.sidebar-menu -->
-    </div>
-    <!-- /.sidebar -->
+          </li> 
   </aside>
 
-  <!-- Content Wrapper. Contains page content -->
+  <!-- Content Wrapper -->
   <div class="content-wrapper">
-
-
-    <!-- Main content -->
     <section class="content pt-4 pb-3 mb-5">
       <div class="container-fluid">
-          <?php 
-            if (isset($_GET['page'])) {
-              $page = $_GET['page'];
-              switch ($page) {
-                case 'home':
-                  include 'anggota/home.php';
-                  break;
-                case 'tiket_wadompet':
-                  include 'anggota/tiket_wadompet.php';
-                  break;
-                case 'riwayat_trx':
-                  include "anggota/riwayat_trx.php";
-                  break;
-                case 'riwayat_pinjam';
-                  include "anggota/riwayat_pinjam.php";
-                  break;
-                case 'profile':
-                  include "anggota/profile_anggota.php";
-                  break;
-                case 'daftar_tiket':
-                  include 'anggota/daftar_tiket.php';
-                  break;
-                case 'dompet':
-                  include "anggota/dompet.php";
-                  break;
-                  case 'tariktunai':
-                  include "anggota/tariktunai.php";
-                  break;
-                case 'sendsaldo':
-                  include "anggota/sendsaldo.php";
-                  break;
-                case 'kas_user':
-                  include "anggota/kas_user.php";
-                  break;
-                  
-                default:
-                  include 'anggota/home.php';
-                  break;
-              }
-            }else{
-              include 'anggota/home.php';
-            }
-
-            if (isset($_GET['page']) == 'home') {
-              if ($_GET['page'] != 'home') {
-                $bgh = 'bg-white';
-              }else{
-                $bgh = 'bg-dark';
-              }
-            }
-            if (isset($_GET['page']) == 'riwayat_trx') {
-              if ($_GET['page'] != 'riwayat_trx') {
-                $bgr = 'bg-white';
-              }else{
-                $bgr = 'bg-dark';
-              }
-            }
-
-            if (isset($_GET['page']) == 'riwayat_pinjam') {
-              if ($_GET['page'] != 'riwayat_pinjam') {
-                $bgrp = 'bg-white';
-              }else{
-                $bgrp = 'bg-dark';
-              }
-            }
-
-            if (isset($_GET['page']) == 'daftar_tiket') {
-              if ($_GET['page'] != 'daftar_tiket') {
-                $bgd = 'bg-white';
-              }else{
-                $bgd = 'bg-dark';
-              }
-            }
-            if (isset($_GET['page']) == 'profile') {
-              if ($_GET['page'] != 'profile') {
-                $bgp = 'bg-white';
-              }else{
-                $bgp = 'bg-dark';
-              }
-            }
-
-            ?>
-      </div><!--/. container-fluid -->
+        <?php
+        switch($page){
+            case 'home': include 'anggota/home.php'; break;
+            case 'tiket_wadompet': include 'anggota/tiket_wadompet.php'; break;
+            case 'riwayat_trx': include 'anggota/riwayat_trx.php'; break;
+            case 'riwayat_pinjam': include 'anggota/riwayat_pinjam.php'; break;
+            case 'profile': include 'anggota/profile_anggota.php'; break;
+            case 'daftar_tiket': include 'anggota/daftar_tiket.php'; break;
+            case 'dompet': include 'anggota/dompet.php'; break;
+            case 'tariktunai': include 'anggota/tariktunai.php'; break;
+            case 'sendsaldo': include 'anggota/sendsaldo.php'; break;
+            case 'kas_user': include 'anggota/kas_user.php'; break;
+            default: include 'anggota/home.php'; break;
+        }
+        ?>
+      </div>
     </section>
-    <!-- /.content -->
-
   </div>
-  <!-- /.content-wrapper -->
 
-  <!-- Control Sidebar -->
-  <aside class="control-sidebar control-sidebar-dark">
-    <!-- Control sidebar content goes here -->
-  </aside>
-  <!-- /.control-sidebar -->
-
-  <!-- Main Footer -->
+  <!-- Footer menu -->
   <footer class="main-footer bg-abu">
     <div class="row">
-      <div class="col-3"><a href="?page=home" title="Home">
-        <div class="info-box <?= $bgh; ?>">
-          <span class="info-box-icon text-orange"><i class="fas fa-home"></i></span>
-        </div>
-        <!-- /.info-box -->
-      </a>
-      </div>
-      <!-- /.col -->
-      <div class="col-3"><a href="?page=riwayat_trx" title="Tiket Pinjam">
-        <div class="info-box <?= $bgr; ?>">
-          <span class="info-box-icon text-orange"><i class="fas fa-table"></i></span>
-        </div>
-        <!-- /.info-box -->
-      </a>
-      </div>
-      <!-- /.col -->
-
-      <div class="col-3"><a href="?page=riwayat_pinjam" title="Riwayat Pinjam">
-        <div class="info-box <?= $bgrp; ?>">
-          <span class="info-box-icon text-orange"><i class="fas fa-table"></i></span>
-        </div>
-        <!-- /.info-box -->
-      </a>
-      </div>
-      <!-- /.col -->
-      
-      <div class="col-3"><a href="?page=profile">
-        <div class="info-box <?= $bgp; ?>" title="Profile">
-          <span class="info-box-icon text-orange"><i class="fas fa-user"></i></span>
-        </div>
-        <!-- /.info-box -->
-      </a>
-      </div>
-      <!-- /.col -->
+      <div class="col-3"><a href="?page=home"><div class="info-box <?= $bgh ?>"><span class="info-box-icon text-orange"><i class="fas fa-home"></i></span></div></a></div>
+      <div class="col-3"><a href="?page=riwayat_trx"><div class="info-box <?= $bgr ?>"><span class="info-box-icon text-orange"><i class="fas fa-table"></i></span></div></a></div>
+      <div class="col-3"><a href="?page=riwayat_pinjam"><div class="info-box <?= $bgrp ?>"><span class="info-box-icon text-orange"><i class="fas fa-table"></i></span></div></a></div>
+      <div class="col-3"><a href="?page=profile"><div class="info-box <?= $bgp ?>"><span class="info-box-icon text-orange"><i class="fas fa-user"></i></span></div></a></div>
     </div>
   </footer>
+
 </div>
-<!-- ./wrapper -->
 
-
-<!-- REQUIRED SCRIPTS -->
-<!-- jQuery -->
+<!-- JS -->
 <script src="plugins/jquery/jquery.min.js"></script>
-<!-- Bootstrap -->
 <script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
-<!-- overlayScrollbars -->
-<script src="plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
-<!-- AdminLTE App -->
-<script src="dist/js/adminlte.js"></script>
-
-<!-- OPTIONAL SCRIPTS -->
-<script src="dist/js/demo.js"></script>
-
-<!-- PAGE PLUGINS -->
-<!-- jQuery Mapael -->
-<script src="plugins/jquery-mousewheel/jquery.mousewheel.js"></script>
-<script src="plugins/raphael/raphael.min.js"></script>
-<script src="plugins/jquery-mapael/jquery.mapael.min.js"></script>
-<script src="plugins/jquery-mapael/maps/usa_states.min.js"></script>
-<!-- ChartJS -->
-<script src="plugins/chart.js/Chart.min.js"></script>
-
-<!-- PAGE SCRIPTS -->
-<script src="dist/js/pages/dashboard2.js"></script>
-
-<!-- Add jQuery library (required) -->
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.4.1/dist/jquery.min.js"></script>
-
-<!-- Add the evo-calendar.js for.. obviously, functionality! -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/evo-calendar@1.1.2/evo-calendar/js/evo-calendar.min.js"></script>
-<script>
-  $('#calendar').evoCalendar({
-    theme: 'Royal Navy'
-});
-</script> -->
-<!-- DataTables -->
+<script src="plugins/select2/js/select2.full.min.js"></script>
 <script src="plugins/datatables/jquery.dataTables.min.js"></script>
 <script src="plugins/datatables-bs4/js/dataTables.bootstrap4.min.js"></script>
 <script src="plugins/datatables-responsive/js/dataTables.responsive.min.js"></script>
-<script src="plugins/datatables-responsive/js/responsive.bootstrap4.min.js"></script>
-<!-- page script -->
-<script>
-  $(function () {
-    $("#example1").DataTable({
-      "responsive": true,
-      "autoWidth": false,
-    });
-
-    $("#example3").DataTable({
-      "responsive": true,
-      "autoWidth": false,
-    });
-
-    $('#example2').DataTable({
-      "paging": true,
-      "lengthChange": false,
-      "searching": false,
-      "ordering": true,
-      "info": true,
-      "autoWidth": false,
-      "responsive": true,
-    });
-  });
-</script>
-
-<!-- Select2 -->
-<script src="plugins/select2/js/select2.full.min.js"></script>
-
-<!-- Page script -->
-<script>
-  $(function () {
-    //Initialize Select2 Elements
-    $('.select2').select2()
-
-    //Initialize Select2 Elements
-    $('.select2bs4').select2({
-      theme: 'bootstrap4'
-    })
-
-  })
-</script>
-
-<script type="text/javascript">
-  var myVar;
-  function myFunction(){
-    myVar = setTimeout(showPage, 1000);
-  }
-
-  function showPage(){
-    document.getElementById('loader').style.display = "none";
-  }
-</script>
-
-<script type="text/javascript">
-  $(document).ready(function(){   
-    $('.form-checkbox').click(function(){
-      if($(this).is(':checked')){
-        $('.check').attr('type','text');
-      }else{
-        $('.check').attr('type','password');
-      }
-    });
-  });
-</script>
-
-<!-- SweetAlert2 -->
 <script src="plugins/sweetalert2/sweetalert2.min.js"></script>
-
-<script type="text/javascript">
-  $(function() {
-    const Toast = Swal.mixin({
-      toast: true,
-      position: 'top',
-      showConfirmButton: false,
-      timer: 3000
+<script>
+$(function () {
+    $('.select2').select2();
+    $("#example1, #example2, #example3").DataTable({
+        "responsive": true,
+        "autoWidth": false
     });
-<?php 
-if (isset($_GET['editprofile']) == 'sukses') { ?>
-    $(function() {
-          Toast.fire({
-            type: 'success',
-            title: 'Perubahan data telah disimpan.'
-          })
-        });
-<?php }else if (isset($_GET['tiket']) == 'sukses'){ ?>
-    $(function() {
-          Toast.fire({
-            type: 'success',
-            title: 'Request tiket anda telah terkirim.'
-          })
-        });
-<?php }
-?>  
 });
+</script>
+<link rel="stylesheet" href="assets/css/custom.css">
+<style>
+    /* Header tabel */
+    #example1 thead th {
+        background: linear-gradient(45deg, #007bff, #00c6ff);
+        color: white;
+        text-align: center;
+        font-size: 13px;
+        padding: 10px;
+    }
 
-</script>
-<script type="text/javascript">
-  $(document).ready(function(){
-    function show() {
-      $("#showone").load("chat/widgets.php");
+    /* Isi tabel */
+    #example1 tbody td {
+        font-size: 12px;
+        text-align: center;
+        vertical-align: middle;
+        transition: all 0.3s ease;
     }
-    show();
-    setInterval(show,1);
-    function notifcat() {
-      $("#notifcat").load("chat/notifcat.php");
+
+    /* Hover baris */
+    #example1 tbody tr:hover {
+        background-color: #f1f9ff !important;
+        transform: scale(1.01);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    notifcat();
-    setInterval(notifcat,1);
-  });
-</script>
+
+    /* Zebra stripes */
+    #example1 tbody tr:nth-child(even) {
+        background-color: #fafafa;
+    }
+
+    /* Efek animasi muncul */
+    #example1 tbody tr {
+        animation: fadeIn 0.4s ease-in;
+    }
+    @keyframes fadeIn {
+        from {opacity: 0; transform: translateY(5px);}
+        to {opacity: 1; transform: translateY(0);}
+    }
+
+    /* Badge aktivitas */
+    .badge-ambil {
+        background-color: #28a745;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+    }
+    .badge-kembali {
+        background-color: #ffc107;
+        color: black;
+        padding: 4px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+    }
+</style>
+
 </body>
 </html>

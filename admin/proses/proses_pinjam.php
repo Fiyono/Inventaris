@@ -1,34 +1,117 @@
 <?php 
+// proses_pinjam.php (DIPERBAIKI DENGAN LOGIKA PENGURANGAN STOK TOTAL)
+// File ini mengurangi tbl_barang.jumlah_brg, sehingga proses pengembalian HARUS menambahnya kembali.
+
 include "../../koneksi.php";
 
 if (isset($_POST['simpanpinjam'])) {
-	$id_brg = $_POST['id_brg'];
-	$barcode_brg = $_POST['barcode_brg'];
-	$id_user = $_POST['id_user'];
-	$tgl_pinjam = $_POST['tgl_pinjam'];
-	$tgl_perkiraan_balik = $_POST['tgl_perkiraan_balik'];
-	$jumlah_brg = $_POST['jumlah_brg'];
-	$organisasi = $_POST['organisasi'];
-	$tujuan_gunabarang = $_POST['tujuan_gunabarang'];
+    
+    // 1. Ambil & Sanitasi Data
+    $id_brg = mysqli_real_escape_string($koneksi, $_POST['id_brg']);
+    $id_user = mysqli_real_escape_string($koneksi, $_POST['id_user']);
+    $tgl_pinjam = mysqli_real_escape_string($koneksi, $_POST['tgl_pinjam']);
+    $tgl_perkiraan_balik = mysqli_real_escape_string($koneksi, $_POST['tgl_perkiraan_balik']);
+    $jumlah_brg = (int) $_POST['jumlah_brg']; 
+    $tujuan_gunabarang = mysqli_real_escape_string($koneksi, $_POST['tujuan_gunabarang']);
 
-	$brg = mysqli_fetch_array(mysqli_query($koneksi, "select * from tbl_barang where id_brg = '".$id_brg."'"));
+    // Ambil organisasi dari user
+    $q_user = mysqli_query($koneksi, "SELECT id_organisasi FROM tb_user WHERE id_user='$id_user'");
+    $data_user = mysqli_fetch_assoc($q_user);
+    $organisasi = $data_user['id_organisasi'] ?? '-';
+    
+    // Periksa jumlah pinjam
+    if ($jumlah_brg <= 0) {
+        echo "<script>alert('Jumlah pinjam tidak valid (harus lebih dari 0).');history.back();</script>";
+        exit;
+    }
 
-	$sql = mysqli_query($koneksi, "insert into tbl_pinjaman(id_pinjaman, id_brg, id_user, tgl_pinjam, jumlah_pinjam, organisasi, tujuan_gunabarang) values('".$intunik."','".$id_brg."','".$id_user."','".$tgl_pinjam."','".$jumlah_brg."','".$organisasi."','".$tujuan_gunabarang."')");
+    // 2. Mulai Transaksi
+    mysqli_begin_transaction($koneksi);
 
-	$jenis_activ = "Pinjam";
-	$waktu_sekarang = date('h:i:s');
-	$hist = mysqli_query($koneksi, "insert into tbl_history(id_history, jenis_aktivitas, id_brg, nama_brg, jumlah_brg, tgl_history, waktu_history) values('','".$jenis_activ."','".$id_brg."', '".$brg['nama_brg']."','".$jumlah_brg."','".$tgl_pinjam."','".$waktu_sekarang."');");
-	$hist_pinjam = mysqli_query($koneksi, "insert into tbl_history_pinjam(id_histpinjam, id_pinjaman, id_brg, id_user, jumlahbrg_pinjam, jumlahbrg_kembali, tujuan_gunabarang, tgl_pinjam, tgl_perkiraan_balik, tgl_kembali) values('','".$intunik."','".$id_brg."','".$id_user."','".$jumlah_brg."','','".$tujuan_gunabarang."','".$tgl_pinjam."', '".$tgl_perkiraan_balik."', '')");
-	if ($sql && $hist) {
-		echo "<script>
-		alert('Data perubahan berhasil disimpan');
-		document.location.href = '../../admin.php?page=detailbarang&id=".$id_brg."';
-		</script>";
-	}else{
-		echo "<script>
-		alert('Data perubahan gagal disimpan');
-		document.location.href = '../../admin.php?page=detailbarang&id=".$id_brg."';
-		</script>";
-	}
+    try {
+        // Ambil data barang dan LOCK baris
+        $brg_query = mysqli_query($koneksi,
+            "SELECT * FROM tbl_barang WHERE id_brg='$id_brg' FOR UPDATE"
+        );
+        if (!$brg_query) {
+             throw new Exception("Gagal mengunci data barang.");
+        }
+        $brg = mysqli_fetch_array($brg_query);
+        
+        if (!$brg) {
+            throw new Exception("Data barang tidak ditemukan.");
+        }
+        
+        // Periksa ketersediaan barang (menggunakan tbl_barang.jumlah_brg yang sudah dikurangi pinjaman/ambil sebelumnya)
+        if ($brg['jumlah_brg'] < $jumlah_brg) {
+            $stok_sekarang = $brg['jumlah_brg'] ?? 0;
+            throw new Exception("Stok barang (tersedia: $stok_sekarang) tidak mencukupi untuk dipinjam!");
+        }
+
+        // Q1: Update Stok Barang (Pengurangan Stok Total)
+        // INI DILAKUKAN UNTUK MEMENUHI PERMINTAAN ANDA & MENJAGA KONSISTENSI DENGAN proses_ambil.php
+        $update_stok = mysqli_query($koneksi,
+            "UPDATE tbl_barang SET jumlah_brg = jumlah_brg - '$jumlah_brg' WHERE id_brg='$id_brg'"
+        );
+        if (!$update_stok) {
+            throw new Exception("Gagal mengurangi stok barang.");
+        }
+
+        // Q2: Simpan pinjaman ke tbl_pinjaman
+        $sql = "INSERT INTO tbl_pinjaman
+            (id_brg, id_user, tgl_pinjam, tgl_perkiraan_balik, jumlah_pinjam, organisasi, tujuan_gunabarang, status)
+            VALUES
+            ('$id_brg', '$id_user', '$tgl_pinjam', '$tgl_perkiraan_balik', '$jumlah_brg', '$organisasi', '$tujuan_gunabarang', 'Dipinjam')";
+        
+        $ok2 = mysqli_query($koneksi, $sql);
+        $id_pinjaman_baru = mysqli_insert_id($koneksi); 
+
+        if (!$ok2 || $id_pinjaman_baru <= 0) {
+             throw new Exception("Gagal menyimpan data pinjaman ke tabel pinjaman.");
+        }
+
+        // Q3: History aktivitas (tbl_history)
+        $jenis_aktivitas = "Pinjam";
+        $waktu_sekarang = date('H:i:s');
+        $hist_brg_name = $brg['nama_brg'] ?? 'Barang tidak diketahui'; 
+        
+        $q_hist = "INSERT INTO tbl_history
+            (jenis_aktivitas, id_brg, nama_brg, jumlah_brg, tgl_history, waktu_history, id_user)
+            VALUES
+            ('$jenis_aktivitas', '$id_brg', '$hist_brg_name', '$jumlah_brg', '$tgl_pinjam', '$waktu_sekarang', '$id_user')";
+        
+        $ok3 = mysqli_query($koneksi, $q_hist);
+        if (!$ok3) {
+            throw new Exception("Gagal mencatat history aktivitas.");
+        }
+        
+        // Q4: History pinjam (tbl_history_pinjam)
+        $q_hist_pinjam = "INSERT INTO tbl_history_pinjam
+            (id_pinjaman, id_brg, id_user, jumlahbrg_pinjam, tujuan_gunabarang, tgl_pinjam, tgl_perkiraan_balik)
+            VALUES
+            ('$id_pinjaman_baru', '$id_brg', '$id_user', '$jumlah_brg', '$tujuan_gunabarang', '$tgl_pinjam', '$tgl_perkiraan_balik')";
+            
+        $ok4 = mysqli_query($koneksi, $q_hist_pinjam);
+        if (!$ok4) {
+            throw new Exception("Gagal mencatat history pinjaman.");
+        }
+
+        // 3. Selesaikan transaksi
+        mysqli_commit($koneksi);
+        
+        echo "<script>
+            alert('Data pinjaman berhasil');
+            document.location.href='../../admin.php?page=detailbarang&id=$id_brg';
+        </script>";
+
+    } catch (Exception $e) {
+        // Jika terjadi kegagalan, Rollback perubahan
+        mysqli_rollback($koneksi);
+        $message = "Gagal memproses pinjaman: " . $e->getMessage();
+        echo "<script>
+            alert('$message');
+            document.location.href='../../admin.php?page=detailbarang&id=$id_brg';
+        </script>";
+    }
 }
 ?>

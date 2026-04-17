@@ -1,518 +1,526 @@
-<?php 
+<?php
 session_start();
-include "koneksi.php"; 
+include "koneksi.php";
 
-if (!isset($_SESSION['agent']) && !isset($_SESSION['id_user'])) {
-  echo "<script>document.location.href = 'login.php';</script>";
+/*
+|--------------------------------------------------------------------------
+| CEK SESSION LOGIN
+|--------------------------------------------------------------------------
+*/
+if (!isset($_SESSION['id_user'])) {
+    header("Location: login.php");
+    exit;
 }
 
-$show_agent = mysqli_query($koneksi, "select * from user_agent x inner join tb_user y on y.id_user = x.id_user where name_user_agent = '".$_SESSION['agent']."' and x.id_user = '".$_SESSION['id_user']."' group by x.id_user asc");
-$show = mysqli_fetch_array($show_agent);
+/*
+|--------------------------------------------------------------------------
+| AMBIL DATA USER
+|--------------------------------------------------------------------------
+*/
+$id_user = $_SESSION['id_user'];
+$query_user = mysqli_query($koneksi, "SELECT * FROM tb_user WHERE id_user='$id_user' LIMIT 1");
+$user = mysqli_fetch_assoc($query_user);
 
-if ($show['id_level'] != '1') {
-  echo "<script>document.location.href = 'logout.php';</script>";
+if (!$user) {
+    session_destroy();
+    header("Location: login.php");
+    exit;
 }
 
-function rupiah($angka){
-  $hasil_rupiah = "Rp. " . number_format($angka, 2 ,',','.');
-  return $hasil_rupiah;
+/*
+|--------------------------------------------------------------------------
+| CEK LEVEL ADMIN
+|--------------------------------------------------------------------------
+*/
+if ($user['id_level'] != 'admin') {
+    header("Location: logout.php");
+    exit;
 }
+
+function rupiah($angka)
+{
+    return "Rp. " . number_format($angka, 2, ',', '.');
+}
+
+$page = isset($_GET['page']) ? $_GET['page'] : 'home';
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Inventaris</title>
+    <link rel="icon" href="dist/img/inventaris.png">
 
-  <title>Inventaris</title>
-  <link rel="icon" href="dist/img/logoinventaris.jpg">
+    <!-- CSS LIBRARY -->
+    <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
+    <link rel="stylesheet" href="plugins/overlayScrollbars/css/OverlayScrollbars.min.css">
+    <link rel="stylesheet" href="dist/css/adminlte.min.css">
+    <link rel="stylesheet" href="plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="plugins/datatables-responsive/css/responsive.bootstrap4.min.css">
+    <link rel="stylesheet" href="plugins/select2/css/select2.min.css">
+    <link rel="stylesheet" href="plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css">
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
 
-  <link rel="stylesheet" type="text/css" href="dist/css/style.css">
-  <!-- Font Awesome Icons -->
-  <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
-  <!-- overlayScrollbars -->
-  <link rel="stylesheet" href="plugins/overlayScrollbars/css/OverlayScrollbars.min.css">
-  <!-- Theme style -->
-  <link rel="stylesheet" href="dist/css/adminlte.min.css">
-  <!-- Google Font: Source Sans Pro -->
-  <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
-
-  <!-- DataTables -->
-  <link rel="stylesheet" href="plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
-  <link rel="stylesheet" href="plugins/datatables-responsive/css/responsive.bootstrap4.min.css">
-
-  <!-- Select2 -->
-  <link rel="stylesheet" href="plugins/select2/css/select2.min.css">
-  <link rel="stylesheet" href="plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css">
-  <!-- Add the evo-calendar.css for styling -->
-<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/evo-calendar@1.1.2/evo-calendar/css/evo-calendar.min.css"/>
-<!-- Input WebCame -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/webcamjs/1.0.25/webcam.min.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.1.3/css/bootstrap.min.css"/>
-
-<!-- jquery untuk hide show chackbox -->
-<script src="plugins/jquery/jquery.js"></script>
-<style type="text/css">
-  .bg-nav{
-    background-image: linear-gradient(#6495ED, #6495ED);
-  }
-  .bg-radian{
-    background-image: linear-gradient(white, #6495ED);
-  }
-  .bg-foot{
-    background-image: linear-gradient(#6495ED, #6495ED)
-  }
-  .bg-abu{
-    background-color: #6495ED;
-  }
-  .text-abu{
-    color: #6495ED;
-  }
-  #results { padding:20px; border:1px solid; background:#ccc; }
-</style>
-
-</head>
-<body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed layout-footer-fixed" onload="myFunction()" style="margin: 0;">
-  <div id="loader"></div>
-<div class="wrapper">
-  <!-- Navbar -->
-  <nav class="main-header navbar navbar-expand navbar-light bg-nav elevation-2">
-    <!-- Left navbar links -->
-    <ul class="navbar-nav">
-      <li class="nav-item">
-        <a class="btn bg-white elevation-1 img-circle" data-widget="pushmenu">
-          <i class="fas fa-user text-abu"></i> <!-- <h6 class="text-primary">Saldo</h6> -->
-        </a>
-      </li>
-      <li class="nav-item d-lg-inline-block">
-        <h4><a href="?page=profile" class="nav-link text-bold text-orange"><?= $show['user']; ?></a></h4>
-      </li>
-    </ul>
-
-    <!-- SEARCH FORM -->
-
-
-  </nav>
-  <!-- /.navbar -->
-
-  <!-- Main Sidebar Container -->
-  <aside class="main-sidebar text-dark bg-danger text-bold elevation-1  bg-radian">
-    <!-- Brand Logo -->
-    <a href="?page=home" class="brand-link">
-      <img src="dist/img/logoinventaris.jpg" alt="AdminLTE Logo" class="brand-image"
-           style="opacity: .8;" width="120" height="40">
-      <span class="brand-text bold text-dark">Inventaris</span>
-    </a>
-
-    <!-- Sidebar -->
-    <div class="sidebar">
-
-      <!-- Sidebar Menu -->
-      <nav class="mt-2">
-        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-          <!-- Add icons to the links using the .nav-icon class
-               with font-awesome or any other icon font library -->
-          <li class="nav-item has-treeview">
-            <a href="#" class="nav-link text-dark">
-              <i class="nav-icon fas fa-database"></i>
-              <p>
-                Master Data
-                <i class="right fas fa-angle-left"></i>
-              </p>
-            </a>
-            <ul class="nav nav-treeview">
-              <li class="nav-item">
-                <a href="?page=master_data" class="nav-link text-dark">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>Data Barang</p>
-                </a>
-              </li> 
-              <li class="nav-item">
-                <a href="?page=data_user" class="nav-link text-dark">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>Data User</p>
-                </a>
-              </li> 
-              <li class="nav-item">
-                <a href="?page=data_organisasi" class="nav-link text-dark">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>Data Organisasi</p>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a href="?page=data_kategori" class="nav-link text-dark">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>Data Kategori</p>
-                </a>
-              </li> 
-            </ul>
-          </li>
-          <li class="nav-item">
-            <a href="?page=tiket_masuk" class="nav-link text-dark">
-              <i class="nav-icon fas fa-dove"></i>
-              <p>Tiket Masuk</p>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="?page=aktifitas" class="nav-link text-dark">
-              <i class="nav-icon fas fa-sticky-note"></i>
-              <p>Aktivitas</p>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="?page=riwayat_pinjam" class="nav-link text-dark">
-              <i class="nav-icon fas fa-history"></i>
-              <p>Riwayat</p>
-            </a>
-          </li>
-          <li class="nav-item has-treeview">
-            <a href="#" class="nav-link text-dark">
-              <i class="nav-icon fas fa-inbox"></i>
-              <p>
-                Inbox
-                <i class="right fas fa-angle-left"></i>
-              </p>
-            </a>
-            <ul class="nav nav-treeview">
-              <li class="nav-item">
-                <a href="use_chatgroup.php" class="nav-link text-dark">
-                  <i class="far fa-comments nav-icon"></i>
-                  <p>Chat Group</p>
-                </a>
-              </li> 
-            </ul>
-          </li>
-          <li class="nav-item">
-            <a href="?page=catatan" class="nav-link text-dark">
-              <i class="nav-icon fas fa-book"></i>
-              <p>Catatan</p>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="?page=daftarlogin" class="nav-link text-dark">
-              <i class="nav-icon fas fa-bookmark"></i>
-              <p>Daftar Login</p>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="logout.php" class="nav-link text-dark">
-              <i class="nav-icon fas fa-sign-out-alt"></i>
-              <p>Logout</p>
-            </a>
-          </li>
-        </ul>
-      </nav>
-
-
-
-      <!-- /.sidebar-menu -->
-    </div>
-    <!-- /.sidebar -->
-  </aside>
-
-  <!-- Content Wrapper. Contains page content -->
-  <div class="content-wrapper">
-
-
-    <!-- Main content -->
-    <section class="content pt-4 pb-3 mb-5">
-      <div class="container-fluid">
-        <!-- =========================================================== -->
-            <?php 
-            if (isset($_GET['page'])) {
-              $page = $_GET['page'];
-              switch ($page) {
-                case 'home':
-                  include 'admin/home.php';
-                  break;
-                // case 'nabung':
-                //   include 'admin/nabung.php';
-                case 'request_tiket':
-                  include 'admin/request_tiket.php';
-                  break;
-                case 'set_members':
-                  include 'admin/set_members.php';
-                  break;
-                case 'master_data':
-                  include 'admin/master_data.php';
-                  break;
-                case 'editmaster_data':
-                  include 'admin/editmaster_data.php';
-                  break;
-                case 'editfoto':
-                  include 'admin/editfoto.php';
-                  break;
-                case 'editfilefoto':
-                  include 'admin/editfilefoto.php';
-                  break;
-                case 'detailbarang':
-                  include 'admin/detailbarang.php';
-                  break;
-                case 'tiket_masuk':
-                  include 'admin/tiket_masuk.php';
-                  break;
-                case 'aktifitas';
-                  include 'admin/aktifitas.php';
-                  break;
-                case 'riwayat_pinjam';
-                  include 'admin/riwayat_pinjam.php';
-                  break;
-                case 'data_user':
-                  include 'admin/data_user.php';
-                  break;
-                case 'data_organisasi':
-                  include 'admin/data_organisasi.php';
-                  break;
-                case 'data_kategori':
-                  include 'admin/data_kategori.php';
-                  break;
-                case 'profile':
-                  include 'admin/profile.php';
-                  break;
-                case 'kas':
-                  include "admin/kas.php";
-                  break;
-                case 'tabungan':
-                  include "admin/tabungan.php";
-                  break;
-                case 'riwayat_tabungankeluar':
-                  include "admin/riwayat_tabungankeluar.php";
-                  break;
-                case 'kas_masuk':
-                  include "admin/kas_masuk.php";
-                  break;
-                case 'kas_keluar':
-                  include "admin/kas_keluar.php";
-                  break;
-                case 'chat_group':
-                  include "admin/chat_group.php";
-                  break;
-                case 'chat_private':
-                  include "admin/chat_private.php";
-                  break;
-                case 'catatan':
-                  include "admin/catatan.php";
-                  break;
-                case 'daftarlogin':
-                  include "admin/daftarlogin.php";
-                  break;
-                case 'edit_set_member':
-                  include "admin/edit_set_member.php";
-                  break;
-                  
-                default:
-                  include 'admin/home.php';
-                  break;
-              }
-            }else{
-              include 'admin/home.php';
-            }
-
-            if (isset($_GET['page']) == 'home') {
-              if ($_GET['page'] != 'home') {
-                $bga = 'bg-white';
-              }else{
-                $bga = 'bg-dark';
-              }
-            }
-            if (isset($_GET['page']) == 'request_tiket') {
-              if ($_GET['page'] != 'request_tiket') {
-                $bgb = 'bg-white';
-              }else{
-                $bgb = 'bg-dark';
-              }
-            }
-            if (isset($_GET['page']) == 'kas') {
-              if ($_GET['page'] != 'kas') {
-                $bgc = 'bg-white';
-              }else{
-                $bgc = 'bg-dark';
-              }
-            }
-            if (isset($_GET['page']) == 'set_members') {
-              if ($_GET['page'] != 'set_members') {
-                $bgd = 'bg-white';
-              }else{
-                $bgd = 'bg-dark';
-              }
-            }
-
-            ?>
-        <!-- /.row -->
-
-        <div class="row">
-          <div class="col-sm-12">
-
-          </div>
-        </div>
-      </div><!--/. container-fluid -->
-    </section>
-    <!-- /.content -->
-
-  </div>
-  <!-- /.content-wrapper -->
-
-  <!-- Main Footer -->
-  <footer class="main-footer bg-foot">
-    <div class="row">
-      <div class="col-3"><a href="?page=home" title="Home">
-        <div class="info-box <?= $bga; ?>">
-          <span class="info-box-icon text-orange"><i class="fas fa-home"></i></span>
-        </div>
-        <!-- /.info-box -->
-      </a>
-      </div>
-      <!-- /.col -->
-      <div class="col-3"><a href="?page=request_tiket" title="Input Barang">
-        <div class="info-box <?= $bgb; ?>">
-          <span class="info-box-icon text-orange"><i class="fas fa-pen-alt"></i></span>
-        </div>
-        <!-- /.info-box -->
-      </a>
-      </div>
-      <!-- /.col -->
-      <div class="col-3"><a href="?page=kas" title="Data Pinjaman">
-        <div class="info-box <?= $bgc; ?>">
-          <span class="info-box-icon text-orange"><i class="fas fa-table"></i></span>
-        </div>
-        <!-- /.info-box -->
-      </a>
-      </div>
-      <!-- /.col -->
-      <div class="col-3"><a href="?page=set_members" title="Data Pengambilan">
-        <div class="info-box <?= $bgd; ?>">
-          <span class="info-box-icon text-orange"><i class="fas fa-file-export"></i></span>
-          <!-- <i class="fa-solid fa-users-rectangle"></i> -->
-        </div>
-        <!-- /.info-box -->
-      </a>
-      </div>
-      <!-- /.col -->
-    </div>
-  </footer>
-</div>
-<!-- ./wrapper -->
-
-<!-- REQUIRED SCRIPTS -->
-<!-- jQuery -->
-<script src="plugins/jquery/jquery.min.js"></script>
-
-<!-- Bootstrap -->
-<script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
-<!-- overlayScrollbars -->
-<script src="plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
-<!-- AdminLTE App -->
-<script src="dist/js/adminlte.js"></script>
-
-<!-- OPTIONAL SCRIPTS -->
-<script src="dist/js/demo.js"></script>
-
-<!-- PAGE PLUGINS -->
-<!-- jQuery Mapael -->
-<script src="plugins/jquery-mousewheel/jquery.mousewheel.js"></script>
-<script src="plugins/raphael/raphael.min.js"></script>
-<script src="plugins/jquery-mapael/jquery.mapael.min.js"></script>
-<script src="plugins/jquery-mapael/maps/usa_states.min.js"></script>
-<!-- ChartJS -->
-<script src="plugins/chart.js/Chart.min.js"></script>
-
-<!-- PAGE SCRIPTS -->
-<script src="dist/js/pages/dashboard2.js"></script>
-
-<!-- Add jQuery library (required) -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.4.1/dist/jquery.min.js"></script> -->
-
-<!-- Add the evo-calendar.js for.. obviously, functionality! -->
-<script src="https://cdn.jsdelivr.net/npm/evo-calendar@1.1.2/evo-calendar/js/evo-calendar.min.js"></script>
-<script>
-  $('#calendar').evoCalendar({
-    theme: 'Royal Navy'
-});
-</script>
-
-<!-- DataTables -->
-<script src="plugins/datatables/jquery.dataTables.min.js"></script>
-<script src="plugins/datatables-bs4/js/dataTables.bootstrap4.min.js"></script>
-<script src="plugins/datatables-responsive/js/dataTables.responsive.min.js"></script>
-<script src="plugins/datatables-responsive/js/responsive.bootstrap4.min.js"></script>
-<!-- page script -->
-<script>
-  $(function () {
-    $("#example1").DataTable({
-      "responsive": true,
-      "autoWidth": false,
-    });
-
-    $('#example2').DataTable({
-      "paging": true,
-      "lengthChange": false,
-      "searching": false,
-      "ordering": true,
-      "info": true,
-      "autoWidth": false,
-      "responsive": true,
-    });
-  });
-</script>
-
-<!-- Select2 -->
-<script src="plugins/select2/js/select2.full.min.js"></script>
-
-<!-- Page script -->
-<script>
-  $(function () {
-    //Initialize Select2 Elements
-    $('.select2').select2()
-
-    //Initialize Select2 Elements
-    $('.select2bs4').select2({
-      theme: 'bootstrap4'
-    })
-
-  })
-</script>
-<script type="text/javascript">
-  var myVar;
-  function myFunction(){
-    myVar = setTimeout(showPage, 1000);
-  }
-
-  function showPage(){
-    document.getElementById('loader').style.display = "none";
-  }
-</script>
-
-<script type="text/javascript">
-  $(document).ready(function(){   
-    $('.form-checkbox').click(function(){
-      if($(this).is(':checked')){
-        $('.check').attr('type','text');
-      }else{
-        $('.check').attr('type','password');
-      }
-    });
-  });
-</script>
-<script language="javascript">
-$(function(){ //Sama jika menggunakan $(document).ready(function(){
- 
-    $("#check-all").click(function(){
- 
-        if ( (this).checked == true ){
- 
-            $('.checkbox').prop('checked', true);
- 
-        } else {
- 
-            $('.checkbox').prop('checked', false);
- 
+    <!-- CUSTOM CSS -->
+    <style>
+        body {
+            font-family: 'Source Sans Pro', sans-serif;
+            background-color: #f4f6f9;
         }
- 
-    });
- 
-});
-</script>
+
+        /* ===================== NAVBAR TOP (mobile hamburger) ===================== */
+        .main-header {
+            display: none;
+        }
+
+        @media (max-width: 991px) {
+            .main-header {
+                display: flex !important;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 1035;
+                height: 57px;
+                background: linear-gradient(to right, rgb(30, 60, 114), #2a5298);
+                align-items: center;
+                padding: 0 15px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            }
+            .main-header .navbar-brand {
+                color: #fff;
+                font-weight: bold;
+                font-size: 18px;
+                text-decoration: none;
+                margin-left: 10px;
+            }
+            .main-header .pushmenu-btn {
+                background: transparent;
+                border: none;
+                color: #fff;
+                font-size: 22px;
+                cursor: pointer;
+                padding: 0;
+                line-height: 1;
+            }
+        }
+
+        /* ===================== CONTENT WRAPPER ===================== */
+        .content-wrapper {
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+        }
+
+        section.content {
+            padding-top: 0 !important;
+            padding-bottom: 0;
+        }
+
+        .card-wrapper {
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            margin-top: 0 !important;
+            margin-bottom: 20px;
+            background: #fff;
+        }
+
+        /* ===================== SIDEBAR ===================== */
+        .main-sidebar {
+            background: linear-gradient(to bottom, rgb(30, 60, 114), #2a5298) !important;
+        }
+
+        .sidebar {
+            background: transparent;
+        }
+
+        .brand-link {
+            background: rgba(0,0,0,0.15) !important;
+            border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+        }
+
+        .brand-text {
+            color: #fff !important;
+        }
+
+        .nav-sidebar .nav-link {
+            color: #fff !important;
+            transition: all 0.3s;
+            border-radius: 8px;
+        }
+
+        .nav-sidebar .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffeb3b !important;
+        }
+
+        .nav-sidebar .nav-item.has-treeview.menu-open > .nav-link {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .nav-treeview {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            margin-left: 5px;
+            padding-left: 5px;
+        }
+
+        /* ===================== FOOTER ===================== */
+        .main-footer {
+            padding: 5px 0 !important;
+            background-color: #f8f9fa !important;
+        }
+
+        .footer-link {
+            padding: 10px 0 !important;
+            display: block;
+            color: #888;
+            font-weight: bold;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .footer-link i {
+            font-size: 20px;
+            margin-bottom: 2px !important;
+        }
+
+        .footer-link span {
+            font-size: 11px;
+            margin-top: -2px !important;
+            display: block;
+            line-height: 1.2;
+        }
+
+        .footer-link:hover i,
+        .footer-link:hover span {
+            color: rgb(0, 89, 255);
+            transform: scale(1.2) translateY(-2px);
+            text-shadow: 0 0 5px rgb(27, 0, 0);
+        }
+
+        .active-footer i,
+        .active-footer span {
+            color: rgb(30, 60, 114) !important;
+            transform: scale(1.1) translateY(-2px);
+        }
+
+        /* ===================== MOBILE OVERRIDES ===================== */
+        @media (max-width: 991px) {
+            /* Konten turun agar tidak tertutup navbar */
+            .content-wrapper {
+                margin-left: 0 !important;
+                padding-top: 57px !important;
+                padding-bottom: 90px !important;
+            }
+
+            /* Footer fixed di bawah */
+            .main-footer {
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                margin-left: 0 !important;
+                z-index: 1030 !important;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            }
+
+            /* Sidebar overlay di atas konten */
+            .main-sidebar {
+                z-index: 1040 !important;
+                transform: translateX(-250px);
+                transition: transform 0.3s ease;
+            }
+
+            /* Saat sidebar terbuka (class sidebar-open pada body oleh AdminLTE) */
+            .sidebar-open .main-sidebar {
+                transform: translateX(0) !important;
+            }
+
+            .wrapper {
+                overflow-x: hidden;
+            }
+
+            /* Overlay gelap saat sidebar terbuka */
+            .sidebar-open::after {
+                content: '';
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.4);
+                z-index: 1035;
+            }
+
+            .footer-link i {
+                font-size: 20px;
+            }
+
+            .footer-link span {
+                font-size: 10px;
+            }
+
+            .card-wrapper {
+                padding: 12px;
+            }
+        }
+
+        /* Desktop: sembunyikan header mobile, tampilkan sidebar normal */
+        @media (min-width: 992px) {
+            .content-wrapper {
+                padding-bottom: 80px;
+            }
+        }
+
+        .table-loader {
+            display: none;
+            text-align: center;
+            padding: 50px 0;
+            font-size: 18px;
+            color: #007bff;
+        }
+    </style>
+</head>
+
+<body class="hold-transition sidebar-mini layout-fixed layout-footer-fixed">
+    <div class="wrapper">
+
+        <!-- ===================== NAVBAR TOP (hanya mobile) ===================== -->
+        <nav class="main-header">
+            <button class="pushmenu-btn" data-widget="pushmenu" role="button">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a href="?page=home" class="navbar-brand">
+                INVENTARIS
+            </a>
+            <div class="ml-auto">
+                <a href="?page=profile" style="color:#fff; font-size:22px; text-decoration:none;">
+                    <i class="fas fa-user-circle"></i>
+                </a>
+            </div>
+        </nav>
+
+        <!-- ===================== SIDEBAR ===================== -->
+        <aside class="main-sidebar elevation-4">
+            <a href="?page=home" class="brand-link">
+                <img src="dist/img/inventaris.jpg" alt="Logo" class="brand-image" style="opacity: .8;" width="250" height="120">
+                <span class="brand-text font-weight-bold">INVENTARIS</span>
+            </a>
+            <div class="sidebar">
+                <nav class="mt-2">
+                    <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+
+                        <!-- MASTER DATA -->
+                        <li class="nav-item has-treeview <?= in_array($page, ['master_data', 'data_user', 'data_kategori']) ? 'menu-open' : '' ?>">
+                            <a href="#" class="nav-link <?= in_array($page, ['master_data', 'data_user', 'data_kategori']) ? 'active' : '' ?>">
+                                <i class="nav-icon fas fa-database"></i>
+                                <p>MASTER DATA <i class="right fas fa-angle-left"></i></p>
+                            </a>
+                            <ul class="nav nav-treeview">
+                                <li class="nav-item">
+                                    <a href="?page=master_data" class="nav-link <?= ($page == 'master_data') ? 'active' : '' ?>">
+                                        <i class="far fa-circle nav-icon"></i><p>DATA BARANG</p>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="?page=data_user" class="nav-link <?= ($page == 'data_user') ? 'active' : '' ?>">
+                                        <i class="far fa-circle nav-icon"></i><p>DATA USER</p>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="?page=data_kategori" class="nav-link <?= ($page == 'data_kategori') ? 'active' : '' ?>">
+                                        <i class="far fa-circle nav-icon"></i><p>DATA KATEGORI</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+
+                        <!-- RIWAYAT -->
+                        <li class="nav-item has-treeview <?= in_array($page, ['aktifitas', 'riwayat_pinjam', 'riwayat_tambah']) ? 'menu-open' : '' ?>">
+                            <a href="#" class="nav-link <?= in_array($page, ['aktifitas', 'riwayat_pinjam', 'riwayat_tambah']) ? 'active' : '' ?>">
+                                <i class="nav-icon fas fa-history"></i>
+                                <p>RIWAYAT <i class="right fas fa-angle-left"></i></p>
+                            </a>
+                            <ul class="nav nav-treeview">
+                                <li class="nav-item">
+                                    <a href="?page=aktifitas" class="nav-link <?= ($page == 'aktifitas') ? 'active' : '' ?>">
+                                        <i class="far fa-circle nav-icon"></i><p>RIWAYAT AMBIL</p>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="?page=riwayat_pinjam" class="nav-link <?= ($page == 'riwayat_pinjam') ? 'active' : '' ?>">
+                                        <i class="far fa-circle nav-icon"></i><p>RIWAYAT PINJAM</p>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="?page=riwayat_tambah" class="nav-link <?= ($page == 'riwayat_tambah') ? 'active' : '' ?>">
+                                        <i class="far fa-circle nav-icon"></i><p>RIWAYAT TAMBAH</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+
+                        <!-- LOGOUT -->
+                        <li class="nav-item">
+                            <a href="logout.php" class="nav-link">
+                                <i class="nav-icon fas fa-sign-out-alt"></i><p>LOGOUT</p>
+                            </a>
+                        </li>
+
+                    </ul>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- ===================== CONTENT WRAPPER ===================== -->
+        <div class="content-wrapper">
+            <section class="content" style="padding-top:0; padding-bottom:0;">
+                <div class="container-fluid" style="padding-top:0; padding-bottom:0;">
+                    <div class="card-wrapper">
+                        <?php
+                        switch ($page) {
+                            case 'home':             include 'admin/home.php'; break;
+                            case 'request_tiket':    include 'admin/request_tiket.php'; break;
+                            case 'set_members':      include 'admin/set_members.php'; break;
+                            case 'master_data':      include 'admin/master_data.php'; break;
+                            case 'editmaster_data':  include 'admin/editmaster_data.php'; break;
+                            case 'editfoto':         include 'admin/editfoto.php'; break;
+                            case 'editfilefoto':     include 'admin/editfilefoto.php'; break;
+                            case 'detailbarang':     include 'admin/detailbarang.php'; break;
+                            case 'tiket_masuk':      include 'admin/tiket_masuk.php'; break;
+                            case 'aktifitas':        include 'admin/aktifitas.php'; break;
+                            case 'riwayat_pinjam':   include 'admin/riwayat_pinjam.php'; break;
+                            case 'riwayat_tambah':   include 'admin/riwayat_tambah.php'; break;
+                            case 'data_user':        include 'admin/data_user.php'; break;
+                            case 'data_organisasi':  include 'admin/data_organisasi.php'; break;
+                            case 'data_kategori':    include 'admin/data_kategori.php'; break;
+                            case 'profile':          include 'admin/profile.php'; break;
+                            case 'kas':              include 'admin/kas.php'; break;
+                            case 'tabungan':         include 'admin/tabungan.php'; break;
+                            case 'riwayat_tabungankeluar': include 'admin/riwayat_tabungankeluar.php'; break;
+                            case 'kas_masuk':        include 'admin/kas_masuk.php'; break;
+                            case 'edit_aktivitas':   include 'admin/edit_aktivitas.php'; break;
+                            case 'kas_keluar':       include 'admin/kas_keluar.php'; break;
+                            case 'catatan':          include 'admin/catatan.php'; break;
+                            case 'daftarlogin':      include 'admin/daftarlogin.php'; break;
+                            case 'edit_set_member':  include 'admin/edit_set_member.php'; break;
+                            case 'edit_riwayat_tambah': include 'admin/edit_riwayat_tambah.php'; break;
+                            default:                 include 'admin/home.php'; break;
+                        }
+                        ?>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ===================== FOOTER BOTTOM NAV ===================== -->
+        <footer class="main-footer">
+            <div class="container">
+                <div class="row text-center">
+                    <div class="col-3">
+                        <a href="?page=home" class="footer-link <?= ($page == 'home') ? 'active-footer' : '' ?>">
+                            <i class="fas fa-home mb-1"></i><br><span>HOME</span>
+                        </a>
+                    </div>
+                    <div class="col-3">
+                        <a href="?page=request_tiket" class="footer-link <?= ($page == 'request_tiket') ? 'active-footer' : '' ?>">
+                            <i class="fas fa-pen-alt mb-1"></i><br><span>INPUT</span>
+                        </a>
+                    </div>
+                    <div class="col-3">
+                        <a href="?page=kas" class="footer-link <?= ($page == 'kas') ? 'active-footer' : '' ?>">
+                            <i class="fas fa-sync-alt mb-1"></i><br><span>BELUM KEMBALI</span>
+                        </a>
+                    </div>
+                    <div class="col-3">
+                        <a href="?page=set_members" class="footer-link <?= ($page == 'set_members') ? 'active-footer' : '' ?>">
+                            <i class="fas fa-sign-out-alt mb-1"></i><br><span>BRG KELUAR</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+
+    </div><!-- /.wrapper -->
+
+    <!-- ===================== JAVASCRIPT ===================== -->
+    <script src="plugins/jquery/jquery.min.js"></script>
+    <script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
+    <script src="dist/js/adminlte.min.js"></script>
+    <script src="plugins/datatables/jquery.dataTables.min.js"></script>
+    <script src="plugins/datatables-bs4/js/dataTables.bootstrap4.min.js"></script>
+    <script src="plugins/datatables-responsive/js/dataTables.responsive.min.js"></script>
+    <script src="plugins/select2/js/select2.full.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+
+            // SELECT2
+            $(".select2").select2();
+            $(".select2bs4").select2({ theme: 'bootstrap4' });
+
+            // DATATABLE #example1
+            if ($('#example1').length) {
+                $('#loader1').show();
+                $('#example1').DataTable({
+                    responsive: true,
+                    autoWidth: false,
+                    initComplete: function () {
+                        $('#loader1').hide();
+                        $('#example1').fadeIn();
+                    }
+                });
+            }
+
+            // DATATABLE #example2
+            if ($('#example2').length) {
+                $('#loader2').show();
+                $('#example2').DataTable({
+                    paging: true,
+                    lengthChange: false,
+                    searching: false,
+                    ordering: true,
+                    info: true,
+                    autoWidth: false,
+                    responsive: true,
+                    initComplete: function () {
+                        $('#loader2').hide();
+                        $('#example2').fadeIn();
+                    }
+                });
+            }
+
+            // Tutup sidebar hanya saat klik link yang BUKAN parent treeview (bukan toggle dropdown)
+            $(document).on('click', '.nav-sidebar .nav-link', function () {
+                if ($(window).width() < 992) {
+                    // Cek apakah parent <li> punya class has-treeview (artinya ini tombol toggle dropdown)
+                    var isTreeviewToggle = $(this).closest('li').hasClass('has-treeview');
+                    if (!isTreeviewToggle) {
+                        // Ini link biasa (sub-menu atau logout) — tutup sidebar
+                        $('body').removeClass('sidebar-open');
+                    }
+                    // Jika treeview toggle → biarkan AdminLTE buka/tutup dropdown, sidebar tetap terbuka
+                }
+            });
+
+            // Tutup sidebar saat klik overlay
+            $(document).on('click', function (e) {
+                if ($(window).width() < 992 && $('body').hasClass('sidebar-open')) {
+                    if (!$(e.target).closest('.main-sidebar, .pushmenu-btn, [data-widget="pushmenu"]').length) {
+                        $('body').removeClass('sidebar-open');
+                    }
+                }
+            });
+
+        });
+
+        // DEBUG CLICK
+        $(document).on("click", ".btn-edit", function () {
+            console.log("CLICK OK");
+        });
+    </script>
 </body>
+
 </html>

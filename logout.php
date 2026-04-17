@@ -1,9 +1,25 @@
-<?php 
+<?php
 session_start();
+
 include "koneksi.php";
-$delete = mysqli_query($koneksi, "delete from user_agent where name_user_agent = '".$_SESSION['agent']."'");
-// unset($_SESSION['agent']);
-// unset($_SESSION['id_user']);
+
+/* ================= HAPUS USER AGENT ================= */
+if(isset($_SESSION['agent'])){
+
+    $agent = mysqli_real_escape_string($koneksi, $_SESSION['agent']);
+
+    mysqli_query($koneksi,"
+        DELETE FROM user_agent
+        WHERE name_user_agent='$agent'
+    ");
+}
+
+/* ================= HAPUS SESSION ================= */
+$_SESSION = [];
+session_unset();
 session_destroy();
-header("location:index.php");
+
+/* ================= REDIRECT ================= */
+header("Location: index.php");
+exit;
 ?>

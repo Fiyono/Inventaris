@@ -1,0 +1,4 @@
+[24-Feb-2025 01:23:00 UTC] PHP Warning:  mysqli_connect(): (HY000/1045): Access denied for user 'root'@'localhost' (using password: NO) in /home/smkg6671/public_html/page_pplg/app/inventaris/koneksi.php on line 17
+[27-Feb-2025 10:44:59 UTC] PHP Warning:  mysqli_connect(): (HY000/1045): Access denied for user 'root'@'localhost' (using password: NO) in /home/smkg6671/public_html/page_pplg/app/inventaris/koneksi.php on line 17
+[27-Feb-2025 12:54:03 UTC] PHP Warning:  mysqli_connect(): (HY000/1045): Access denied for user 'root'@'localhost' (using password: NO) in /home/smkg6671/public_html/page_pplg/app/inventaris/koneksi.php on line 17
+[07-Mar-2025 01:33:06 UTC] PHP Warning:  mysqli_connect(): (HY000/1045): Access denied for user 'root'@'localhost' (using password: NO) in /home/smkg6671/public_html/page_pplg/app/inventaris/koneksi.php on line 17

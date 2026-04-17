@@ -1,0 +1,13 @@
+/* Style khusus untuk tabel Daftar Aktifitas */
+#example1 {
+    font-size: 13px;   /* ukuran font isi tabel */
+}
+
+#example1 th {
+    font-size: 14px;   /* ukuran font header tabel */
+    font-weight: bold;
+}
+
+#example1 td {
+    vertical-align: middle; /* biar teks rapi di tengah vertikal */
+}

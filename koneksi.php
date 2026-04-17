@@ -1,29 +1,26 @@
 <?php
-// $host = "localhost";
-// $user = "smkg6771";
-// $pass = "smksapra2123";
-// $db = "smkg6671_wadompet";
+$host = "localhost";
+$user = "root";
+$pass = "";
+$db   = "db_admin";
 
-$host = "localhost"; 
-$user = "smkg6671_paktaris"; 
-$pass = "paktaris"; 
-$db = "smkg6671_db_paktaris"; 
+$koneksi = mysqli_connect($host, $user, $pass, $db);
 
-// $host = "localhost";
-// $user = "root";
-// $pass = "";
-// $db = "db_paktaris";
-
-$koneksi = mysqli_connect($host, $user, $pass, $db) 
-or die('Could not connect : ' . mysqli_connect_error());
+if (!$koneksi) {
+    die("Koneksi gagal: " . mysqli_connect_error());
+}
 
 date_default_timezone_set('Asia/Jakarta');
 
-// mysqli_close($koneksi);
-
-//mendapatkan kode urut tbl_pinjaman
-$unik = mysqli_fetch_array(mysqli_query($koneksi, "select max(id_pinjaman) as kode from tbl_pinjaman"));
-$intunik = (int) $unik['kode'];
-$intunik++;
-//echo $intunik;
+// cek apakah tabel tbl_pinjaman ada
+$unik = 0;
+$q = mysqli_query($koneksi, "SHOW TABLES LIKE 'tbl_pinjaman'");
+if (mysqli_num_rows($q) > 0) {
+    $res = mysqli_query($koneksi, "SELECT MAX(id_pinjaman) AS kode FROM tbl_pinjaman");
+    if ($res && mysqli_num_rows($res) > 0) {
+        $row = mysqli_fetch_assoc($res);
+        $unik = (int)$row['kode'] + 1;
+    }
+}
+// echo $unik;
 ?>
