@@ -1,31 +1,66 @@
 <?php
 // cetak_struk.php - Halaman Cetak Struk Peminjaman (di root folder)
+include "koneksi.php";
 
-// Ambil data dari URL parameter
+// Cek apakah panggilan via ID (dari riwayat_pinjam) atau via data (dari form peminjaman)
+$id_pinjaman = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $data_json = isset($_GET['data']) ? base64_decode(urldecode($_GET['data'])) : '';
 
-if (empty($data_json)) {
-    echo "<!DOCTYPE html>
-    <html>
-    <head>
-        <title>Error</title>
-        <style>
-            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-            .error { color: red; }
-        </style>
-    </head>
-    <body>
-        <div class='error'>
-            <h2>Error</h2>
-            <p>Tidak ada data struk! Silakan lakukan peminjaman terlebih dahulu.</p>
-            <a href='admin.php?page=peminjaman'>Kembali ke Form Peminjaman</a>
-        </div>
-    </body>
-    </html>";
-    exit;
+$data = null;
+
+// Jika panggilan via ID (dari riwayat_pinjam)
+if ($id_pinjaman > 0) {
+    // Ambil data peminjaman dari database
+    $query = mysqli_query($koneksi, "
+        SELECT 
+            p.id_pinjaman,
+            p.tgl_pinjam,
+            p.tgl_perkiraan_balik,
+            p.jumlah_pinjam,
+            p.tujuan_gunabarang,
+            p.status,
+            u.nama_lengkap,
+            b.nama_brg,
+            b.spesifikasi_brg,
+            b.merk_brg,
+            COALESCE(SUM(h.jumlahbrg_kembali), 0) AS total_kembali
+        FROM tbl_pinjaman p
+        JOIN tb_user u ON p.id_user = u.id_user
+        JOIN tbl_barang b ON p.id_brg = b.id_brg
+        LEFT JOIN tbl_history_pinjam h ON h.id_pinjaman = p.id_pinjaman
+        WHERE p.id_pinjaman = '$id_pinjaman'
+        GROUP BY p.id_pinjaman
+    ");
+    
+    $row = mysqli_fetch_assoc($query);
+    
+    if ($row) {
+        // Format data sesuai dengan struktur yang diharapkan oleh template struk
+        $data = [
+            'nomor' => str_pad($row['id_pinjaman'], 6, '0', STR_PAD_LEFT),
+            'tanggal' => $row['tgl_pinjam'],
+            'peminjam' => $row['nama_lengkap'],
+            'tgl_kembali' => $row['tgl_perkiraan_balik'],
+            'tujuan' => $row['tujuan_gunabarang'],
+            'total_barang' => 1,
+            'total_unit' => $row['jumlah_pinjam'],
+            'barang' => [
+                [
+                    'nama' => $row['nama_brg'],
+                    'spesifikasi' => $row['spesifikasi_brg'],
+                    'merk' => $row['merk_brg'],
+                    'jumlah' => $row['jumlah_pinjam']
+                ]
+            ]
+        ];
+    }
+} 
+// Jika panggilan via data JSON (dari form peminjaman)
+else if (!empty($data_json)) {
+    $data = json_decode($data_json, true);
 }
 
-$data = json_decode($data_json, true);
+// Jika tidak ada data, tampilkan error
 if (!$data) {
     echo "<!DOCTYPE html>
     <html>
@@ -39,7 +74,7 @@ if (!$data) {
     <body>
         <div class='error'>
             <h2>Error</h2>
-            <p>Data struk tidak valid!</p>
+            <p>Tidak ada data struk! Silakan lakukan peminjaman terlebih dahulu.</p>
             <a href='admin.php?page=peminjaman'>Kembali ke Form Peminjaman</a>
         </div>
     </body>
@@ -64,6 +99,7 @@ if (!$data) {
             align-items: center; 
             min-height: 100vh; 
             padding: 20px; 
+            flex-direction: column;
         }
         .struk { 
             width: 80mm; 
@@ -180,14 +216,16 @@ if (!$data) {
     
     <div class="btn-print">
         <button class="btn-cetak" onclick="window.print()">🖨️ Cetak Struk</button>
-        <button class="btn-tutup" onclick="window.location.href='admin.php?page=riwayat_pinjam'">✖️ Tutup</button>
+        <button class="btn-tutup" onclick="window.location.href='http://localhost/inventaris/admin.php?page=riwayat_pinjam'">✖️ Tutup</button>
     </div>
     
     <script>
-        // Auto print setelah halaman selesai dimuat
+        // Auto print setelah halaman selesai dimuat (hanya untuk cetak otomatis)
+        <?php if (isset($_GET['auto_print']) && $_GET['auto_print'] == 1): ?>
         setTimeout(function() {
             window.print();
-        }, 1000);
+        }, 500);
+        <?php endif; ?>
     </script>
 </body>
 </html>

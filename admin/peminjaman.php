@@ -128,7 +128,9 @@ $barang_query = mysqli_query($koneksi, "
 ?>
 
 <style>
-/* ========== STYLE PEMINJAMAN ========== */
+/* ========== STYLE PEMINJAMAN - RESPONSIF MOBILE ========== */
+
+/* Style Desktop (default) */
 .barang-item {
     display: flex;
     align-items: center;
@@ -156,47 +158,6 @@ $barang_query = mysqli_query($koneksi, "
     min-width: 200px;
 }
 
-/* Responsif mobile */
-@media (max-width: 768px) {
-    .table-responsive {
-        overflow-x: auto;
-        display: block;
-    }
-    
-    .barang-gambar {
-        width: 50px;
-        height: 50px;
-    }
-    
-    .barang-item {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .barang-info {
-        width: 100%;
-    }
-    
-    #tblBarang thead {
-        display: table-header-group;
-    }
-    
-    #tblBarang td {
-        vertical-align: middle;
-    }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-    #tblBarang {
-        font-size: 13px;
-    }
-    
-    .barang-gambar {
-        width: 50px;
-        height: 50px;
-    }
-}
-
 .btn-group-custom {
     display: flex;
     gap: 10px;
@@ -208,6 +169,357 @@ $barang_query = mysqli_query($koneksi, "
 .btn-group-custom button {
     padding: 8px 20px;
 }
+
+/* Tombol tambah di desktop */
+.btn-tambah-desktop {
+    display: inline-block;
+}
+
+.btn-tambah-mobile {
+    display: none;
+}
+
+/* ========== RESPONSIF MOBILE (tanpa mengubah logika) ========== */
+@media only screen and (max-width: 768px) {
+    /* Card & Container */
+    .card {
+        margin: 10px;
+        border-radius: 10px;
+    }
+    
+    .card-header {
+        padding: 12px 15px;
+    }
+    
+    .card-header .card-title {
+        font-size: 16px !important;
+    }
+    
+    .card-body {
+        padding: 15px;
+    }
+    
+    /* Form Group */
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        font-size: 13px;
+        margin-bottom: 5px;
+        display: block;
+    }
+    
+    .form-control, .form-control-sm {
+        font-size: 14px;
+        padding: 8px 10px;
+        height: auto;
+    }
+    
+    select.form-control {
+        font-size: 14px;
+        padding: 8px 10px;
+    }
+    
+    /* Sembunyikan tombol tambah di desktop, tampilkan di mobile */
+    .btn-tambah-desktop {
+        display: none;
+    }
+    
+    .btn-tambah-mobile {
+        display: block;
+        width: 100%;
+        margin-bottom: 15px;
+    }
+    
+    /* Tabel Mobile View - Card Style */
+    .table-responsive {
+        overflow-x: visible !important;
+        border: none;
+    }
+    
+    #tblBarang {
+        width: 100%;
+        border: none;
+    }
+    
+    /* Sembunyikan header tabel di mobile */
+    #tblBarang thead {
+        display: none;
+    }
+    
+    #tblBarang tbody tr {
+        display: block;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        padding: 10px;
+        position: relative;
+    }
+    
+    #tblBarang tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: left !important;
+        padding: 10px 8px;
+        border: none;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 13px;
+        gap: 10px;
+    }
+    
+    #tblBarang tbody td:last-child {
+        border-bottom: none;
+    }
+    
+    /* Label untuk setiap kolom di mobile */
+    #tblBarang tbody td:before {
+        content: attr(data-label);
+        font-weight: bold;
+        color: #007bff;
+        width: 35%;
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+    
+    /* Kolom Nomor */
+    #tblBarang tbody td:first-child {
+        font-weight: bold;
+        background: #f8f9fa;
+        border-radius: 6px;
+        margin-bottom: 5px;
+    }
+    
+    #tblBarang tbody td:first-child:before {
+        content: "No. Urut";
+    }
+    
+    /* Kolom Gambar */
+    #tblBarang tbody td:nth-child(2):before {
+        content: "Gambar";
+    }
+    
+    #tblBarang tbody td:nth-child(2) {
+        justify-content: flex-start;
+    }
+    
+    .barang-gambar {
+        width: 50px;
+        height: 50px;
+    }
+    
+    /* Kolom Nama Barang (select) */
+    #tblBarang tbody td:nth-child(3):before {
+        content: "Nama Barang";
+    }
+    
+    #tblBarang tbody td:nth-child(3) select {
+        width: 65%;
+        font-size: 13px;
+    }
+    
+    /* Kolom Spesifikasi */
+    #tblBarang tbody td:nth-child(4):before {
+        content: "Spesifikasi";
+    }
+    
+    #tblBarang tbody td:nth-child(4) {
+        word-break: break-word;
+    }
+    
+    /* Kolom Merk */
+    #tblBarang tbody td:nth-child(5):before {
+        content: "Merk";
+    }
+    
+    /* Kolom Stok */
+    #tblBarang tbody td:nth-child(6):before {
+        content: "Stok Tersedia";
+    }
+    
+    /* Kolom Jumlah */
+    #tblBarang tbody td:nth-child(7):before {
+        content: "Jumlah Pinjam";
+    }
+    
+    #tblBarang tbody td:nth-child(7) input {
+        width: 65%;
+        font-size: 13px;
+    }
+    
+    /* Kolom Aksi - khusus untuk tombol hapus */
+    #tblBarang tbody td:last-child:before {
+        content: "Aksi";
+    }
+    
+    #tblBarang tbody td:last-child {
+        justify-content: flex-end;
+    }
+    
+    #tblBarang tbody td:last-child button {
+        width: auto;
+        padding: 5px 15px;
+    }
+    
+    /* Tombol di mobile */
+    .btn-group-custom {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .btn-group-custom button {
+        width: 100%;
+        justify-content: center;
+        padding: 10px;
+        font-size: 14px;
+    }
+    
+    /* Tombol tambah barang di mobile */
+    .btn-tambah-bawah {
+        display: block;
+        width: 100%;
+        margin-top: 15px;
+        margin-bottom: 15px;
+    }
+    
+    /* Modal Preview Gambar */
+    .modal-dialog {
+        margin: 20px;
+    }
+    
+    .modal-content {
+        border-radius: 12px;
+    }
+    
+    /* Textarea */
+    textarea.form-control {
+        font-size: 14px;
+        padding: 8px 10px;
+    }
+    
+    /* Small text */
+    .text-muted {
+        font-size: 11px;
+        display: block;
+        margin-top: 10px;
+    }
+    
+    /* Row spacing */
+    .row {
+        margin-right: -10px;
+        margin-left: -10px;
+    }
+    
+    .col-6, .col-md-3, .col-md-6, .col-12 {
+        padding-right: 10px;
+        padding-left: 10px;
+    }
+}
+
+/* Tablet mode (769px - 1024px) */
+@media only screen and (min-width: 769px) and (max-width: 1024px) {
+    #tblBarang {
+        font-size: 13px;
+    }
+    
+    .barang-gambar {
+        width: 50px;
+        height: 50px;
+    }
+    
+    #tblBarang thead th {
+        font-size: 12px;
+        padding: 8px 5px;
+    }
+    
+    #tblBarang tbody td {
+        font-size: 12px;
+        padding: 8px 5px;
+    }
+    
+    .form-control-sm {
+        font-size: 12px;
+    }
+    
+    .btn-tambah-mobile {
+        display: none;
+    }
+    
+    .btn-tambah-desktop {
+        display: inline-block;
+    }
+}
+
+/* Desktop tetap tampil normal */
+@media only screen and (min-width: 1025px) {
+    #tblBarang {
+        width: 100% !important;
+    }
+    
+    /* Pastikan tabel normal di desktop */
+    #tblBarang thead {
+        display: table-header-group;
+    }
+    
+    #tblBarang tbody tr {
+        display: table-row;
+        border: none;
+        margin-bottom: 0;
+        padding: 0;
+        box-shadow: none;
+    }
+    
+    #tblBarang tbody td {
+        display: table-cell;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    #tblBarang tbody td:before {
+        display: none;
+    }
+    
+    .btn-tambah-mobile {
+        display: none;
+    }
+    
+    .btn-tambah-desktop {
+        display: inline-block;
+    }
+}
+
+/* Untuk layar sangat kecil (max 480px) */
+@media only screen and (max-width: 480px) {
+    .card-body {
+        padding: 10px;
+    }
+    
+    #tblBarang tbody td {
+        flex-wrap: wrap;
+        padding: 8px 5px;
+    }
+    
+    #tblBarang tbody td:before {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+    
+    #tblBarang tbody td:nth-child(3) select,
+    #tblBarang tbody td:nth-child(7) input {
+        width: 100%;
+    }
+    
+    #tblBarang tbody td:last-child {
+        justify-content: center;
+    }
+    
+    .btn-group-custom button {
+        font-size: 13px;
+        padding: 8px;
+    }
+}
 </style>
 
 <div class="row">
@@ -215,7 +527,7 @@ $barang_query = mysqli_query($koneksi, "
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white">
                 <div class="card-title mb-0" style="font-size:18px; font-weight:bold;">
-                    <i class="fas fa-boxes"></i> FORM PEMINJAMAN BARANG
+                    <i class="fas fa-boxes"></i> PEMINJAMAN BARANG
                 </div>
                 <div class="card-tools">
                     <a href="?page=master_data" class="btn btn-default btn-sm text-white" style="background: rgba(255,255,255,0.2);">
@@ -265,6 +577,14 @@ $barang_query = mysqli_query($koneksi, "
                     <!-- Daftar Barang -->
                     <div class="form-group">
                         <label><i class="fas fa-list"></i> DAFTAR BARANG YANG AKAN DIPINJAM</label>
+                        
+                        <!-- Tombol Tambah Barang untuk Mobile -->
+                        <div class="btn-tambah-mobile">
+                            <button type="button" class="btn btn-success btn-block" onclick="tambahBaris()">
+                                <i class="fas fa-plus"></i> TAMBAH BARANG
+                            </button>
+                        </div>
+                        
                         <div class="table-responsive">
                             <table class="table table-bordered table-hover" id="tblBarang">
                                 <thead class="bg-secondary">
@@ -277,7 +597,7 @@ $barang_query = mysqli_query($koneksi, "
                                         <th width="5%">Stok</th>
                                         <th width="10%">Jumlah</th>
                                         <th width="5%">
-                                            <button type="button" class="btn btn-success btn-sm" onclick="tambahBaris()" title="Tambah Barang">
+                                            <button type="button" class="btn btn-success btn-sm btn-tambah-desktop" onclick="tambahBaris()" title="Tambah Barang">
                                                 <i class="fas fa-plus"></i>
                                             </button>
                                         </th>
@@ -286,8 +606,8 @@ $barang_query = mysqli_query($koneksi, "
                                 <tbody id="tbodyBarang">
                                     <!-- Baris 1 -->
                                     <tr id="baris1">
-                                        <td class="text-center">1</td>
-                                        <td class="text-center">
+                                        <td class="text-center" data-label="No. Urut">1</td>
+                                        <td class="text-center" data-label="Gambar">
                                             <img src="dist/upload_img/default.png" 
                                                  class="barang-gambar" 
                                                  id="gambar_1"
@@ -295,7 +615,7 @@ $barang_query = mysqli_query($koneksi, "
                                                  style="display:none;"
                                                  onclick="previewGambar(this)">
                                         </td>
-                                        <td>
+                                        <td data-label="Nama Barang">
                                             <select name="barang_ids[]" class="form-control form-control-sm select-barang" id="select_1" onchange="updateBarang(this, 1)" required>
                                                 <option value="">-- Pilih Barang --</option>
                                                 <?php 
@@ -324,21 +644,29 @@ $barang_query = mysqli_query($koneksi, "
                                                 <?php endwhile; ?>
                                             </select>
                                         </td>
-                                        <td class="spesifikasi-cell" id="spesifikasi_1">-</td>
-                                        <td class="merk-cell" id="merk_1">-</td>
-                                        <td class="stok-cell text-center" id="stok_1">-</td>
-                                        <td>
+                                        <td class="spesifikasi-cell" id="spesifikasi_1" data-label="Spesifikasi">-</td>
+                                        <td class="merk-cell" id="merk_1" data-label="Merk">-</td>
+                                        <td class="stok-cell text-center" id="stok_1" data-label="Stok Tersedia">-</td>
+                                        <td data-label="Jumlah Pinjam">
                                             <input type="number" name="jumlah_pinjam[]" class="form-control form-control-sm jumlah-pinjam" min="1" value="1" onchange="validasiJumlah(this, 1)">
                                         </td>
-                                        <td class="text-center">
+                                        <td class="text-center" data-label="Aksi">
                                             <button type="button" class="btn btn-danger btn-sm" onclick="hapusBaris(this)" title="Hapus">
-                                                <i class="fas fa-trash"></i>
+                                                <i class="fas fa-trash"></i> Hapus
                                             </button>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
+                        
+                        <!-- Tombol Tambah Barang untuk Mobile (bawah tabel) -->
+                        <div class="btn-tambah-mobile" style="margin-top: 10px;">
+                            <button type="button" class="btn btn-success btn-block" onclick="tambahBaris()">
+                                <i class="fas fa-plus"></i> TAMBAH BARANG LAGI
+                            </button>
+                        </div>
+                        
                         <small class="text-muted">
                             <i class="fas fa-info-circle"></i> 
                             Klik gambar untuk memperbesar. Klik tombol <i class="fas fa-plus text-success"></i> untuk menambah barang.
@@ -348,9 +676,6 @@ $barang_query = mysqli_query($koneksi, "
                     <div class="btn-group-custom">
                         <button type="reset" class="btn btn-default">
                             <i class="fas fa-undo"></i> Reset
-                        </button>
-                        <button type="submit" name="simpan_multipinjam" class="btn btn-info">
-                            <i class="fas fa-save"></i> SIMPAN
                         </button>
                         <button type="submit" name="simpan_cetak" class="btn btn-success">
                             <i class="fas fa-print"></i> SIMPAN & CETAK STRUK
@@ -470,10 +795,10 @@ function validasiJumlah(inputElement, rowId) {
             inputElement.value = maxStok;
         }
         if (jumlah < 1 || isNaN(jumlah)) {
-            jumlahInput.value = 1;
+            inputElement.value = 1;
         }
     } else if (jumlah < 1 || isNaN(jumlah)) {
-        jumlahInput.value = 1;
+        inputElement.value = 1;
     }
 }
 
@@ -504,8 +829,8 @@ function tambahBaris() {
     <?php endwhile; ?>
     
     newRow.innerHTML = `
-        <td class="text-center">${barisCount}</td>
-        <td class="text-center">
+        <td class="text-center" data-label="No. Urut">${barisCount}</td>
+        <td class="text-center" data-label="Gambar">
             <img src="dist/upload_img/default.png" 
                  class="barang-gambar" 
                  id="gambar_${barisCount}"
@@ -513,25 +838,28 @@ function tambahBaris() {
                  style="display:none;cursor:pointer;"
                  onclick="previewGambar(this)">
         </td>
-        <td>
+        <td data-label="Nama Barang">
             <select name="barang_ids[]" class="form-control form-control-sm select-barang" id="select_${barisCount}" onchange="updateBarang(this, ${barisCount})" required>
                 ${optionsHtml}
             </select>
         </td>
-        <td class="spesifikasi-cell" id="spesifikasi_${barisCount}">-</td>
-        <td class="merk-cell" id="merk_${barisCount}">-</td>
-        <td class="stok-cell text-center" id="stok_${barisCount}">-</td>
-        <td>
+        <td class="spesifikasi-cell" id="spesifikasi_${barisCount}" data-label="Spesifikasi">-</td>
+        <td class="merk-cell" id="merk_${barisCount}" data-label="Merk">-</td>
+        <td class="stok-cell text-center" id="stok_${barisCount}" data-label="Stok Tersedia">-</td>
+        <td data-label="Jumlah Pinjam">
             <input type="number" name="jumlah_pinjam[]" class="form-control form-control-sm jumlah-pinjam" min="1" value="1" onchange="validasiJumlah(this, ${barisCount})">
         </td>
-        <td class="text-center">
+        <td class="text-center" data-label="Aksi">
             <button type="button" class="btn btn-danger btn-sm" onclick="hapusBaris(this)" title="Hapus">
-                <i class="fas fa-trash"></i>
+                <i class="fas fa-trash"></i> Hapus
             </button>
         </td>
     `;
     
     tbody.appendChild(newRow);
+    
+    // Scroll ke baris baru
+    newRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 // Hapus baris

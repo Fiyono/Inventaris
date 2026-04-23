@@ -201,6 +201,29 @@ html, body {
     transform: translateY(-1px);
 }
 
+/* Tombol Cetak Struk */
+.btn-cetak {
+    background: linear-gradient(45deg, #17a2b8, #138496);
+    color: #fff;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    text-decoration: none;
+    transition: 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-right: 5px;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-cetak:hover {
+    background: linear-gradient(45deg, #138496, #0f6674);
+    color: white;
+    transform: translateY(-1px);
+}
+
 /* Search & tombol sejajar */
 .dataTables_filter {
     display: flex !important;
@@ -349,12 +372,16 @@ html, body {
     font-size: 11px;
 }
 
-/* ========== RESPONSIVE MOBILE ========== */
-@media screen and (max-width: 768px) {
+/* ========== RESPONSIVE MOBILE - TANPA MENGUBAH LOGIKA ========== */
+
+/* Mobile Landscape & Portrait (max-width: 768px) */
+@media only screen and (max-width: 768px) {
+    /* Sembunyikan header tabel */
     #example1 thead {
         display: none;
     }
     
+    /* Setiap baris menjadi card */
     #example1 tbody tr {
         display: block;
         border: 1px solid #dee2e6;
@@ -362,88 +389,129 @@ html, body {
         margin-bottom: 15px;
         background: white;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        padding: 10px;
+        padding: 12px;
     }
     
+    /* Setiap kolom menjadi flex row */
     #example1 tbody td {
         display: flex;
         justify-content: space-between;
         align-items: center;
         text-align: left !important;
-        padding: 8px 10px;
-        border-bottom: 1px solid #eee;
+        padding: 10px 8px;
+        border-bottom: 1px solid #e9ecef;
         font-size: 12px;
+        gap: 10px;
     }
     
+    /* Hapus border bottom untuk kolom terakhir */
     #example1 tbody td:last-child {
         border-bottom: none;
     }
     
+    /* Label untuk setiap kolom */
     #example1 tbody td:before {
         content: attr(data-label);
         font-weight: bold;
         color: #007bff;
         width: 40%;
         font-size: 11px;
+        flex-shrink: 0;
     }
     
+    /* Khusus kolom aksi */
     #example1 tbody td[data-label="AKSI"] {
-        display: flex;
+        flex-wrap: wrap;
         justify-content: flex-start;
         gap: 8px;
-        flex-wrap: wrap;
     }
     
     #example1 tbody td[data-label="AKSI"]:before {
         content: "AKSI";
-        font-weight: bold;
-        color: #007bff;
-        width: 40%;
-        font-size: 11px;
+        width: auto;
+        margin-right: 10px;
     }
     
-    .btn-edit, .btn-hapus {
-        padding: 5px 10px;
+    /* Tombol di mobile */
+    .btn-edit, .btn-hapus, .btn-cetak {
+        padding: 6px 12px;
         font-size: 11px;
+        flex: 1;
+        justify-content: center;
     }
     
+    /* Header card */
     .card-header .card-title,
     .card-header .mb-0 {
         font-size: 16px !important;
     }
     
+    /* Search box */
     .dataTables_filter {
         flex-direction: column;
         align-items: stretch;
+        margin-bottom: 15px;
     }
     
     .dataTables_filter label {
         width: 100%;
         justify-content: space-between;
+        margin-bottom: 10px;
     }
     
     .dataTables_filter input {
         flex: 1;
+        margin-left: 10px !important;
+        height: 36px;
+        font-size: 14px;
     }
     
+    /* Tombol export */
     .btn-export {
         justify-content: center;
         width: 100%;
         margin-left: 0;
+        margin-top: 5px;
+        padding: 8px;
+    }
+    
+    /* Pagination */
+    .dataTables_paginate {
+        margin-top: 15px;
+        text-align: center;
     }
     
     .dataTables_paginate .paginate_button {
-        padding: 4px 8px !important;
+        padding: 6px 10px !important;
         font-size: 11px !important;
+        margin: 2px !important;
     }
     
     .dataTables_info {
         font-size: 11px;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    
+    /* Modal di mobile */
+    .modal-content-edit, .modal-content-confirm {
+        width: 95%;
+        padding: 20px;
+        margin: 10px;
+    }
+    
+    .modal-content-edit h4, .modal-content-confirm h4 {
+        font-size: 16px;
+    }
+    
+    .modal-buttons button {
+        padding: 8px 15px;
+        font-size: 13px;
     }
 }
 
-/* Tablet */
-@media screen and (min-width: 769px) and (max-width: 1024px) {
+/* Tablet (769px - 1024px) */
+@media only screen and (min-width: 769px) and (max-width: 1024px) {
     #example1 {
         font-size: 13px;
     }
@@ -457,12 +525,107 @@ html, body {
         font-size: 11px;
         padding: 8px 5px;
     }
+    
+    .btn-edit, .btn-hapus, .btn-cetak {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+    
+    .dataTables_filter input {
+        height: 30px;
+        font-size: 12px;
+    }
 }
 
-/* Desktop tetap tampil normal */
-@media screen and (min-width: 769px) {
+/* Layar sangat kecil (max-width: 480px) */
+@media only screen and (max-width: 480px) {
+    .card-body {
+        padding: 10px;
+    }
+    
+    #example1 tbody tr {
+        padding: 8px;
+    }
+    
+    #example1 tbody td {
+        flex-wrap: wrap;
+        padding: 8px 5px;
+    }
+    
+    #example1 tbody td:before {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+    
+    #example1 tbody td[data-label="AKSI"] {
+        flex-direction: column;
+    }
+    
+    #example1 tbody td[data-label="AKSI"]:before {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+    
+    .btn-edit, .btn-hapus, .btn-cetak {
+        width: 100%;
+        margin: 2px 0;
+    }
+    
+    .modal-content-edit, .modal-content-confirm {
+        padding: 15px;
+    }
+    
+    textarea.form-control, input.form-control {
+        font-size: 14px;
+    }
+}
+
+/* Desktop tetap tampil normal (min-width: 1025px) */
+@media only screen and (min-width: 1025px) {
     #example1 {
         width: 100% !important;
+    }
+    
+    /* Pastikan tabel normal di desktop */
+    #example1 thead {
+        display: table-header-group;
+    }
+    
+    #example1 tbody tr {
+        display: table-row;
+        border: none;
+        margin-bottom: 0;
+        padding: 0;
+        box-shadow: none;
+    }
+    
+    #example1 tbody td {
+        display: table-cell;
+        border-bottom: 1px solid #dee2e6;
+        text-align: center;
+    }
+    
+    #example1 tbody td:before {
+        display: none;
+    }
+    
+    .btn-edit, .btn-hapus, .btn-cetak {
+        width: auto;
+    }
+}
+
+/* Style untuk print */
+@media print {
+    .btn-print, .btn-export, .dataTables_filter, .dataTables_paginate {
+        display: none;
+    }
+    
+    #example1 thead {
+        display: table-header-group;
+    }
+    
+    #example1 tbody td:before {
+        display: none;
     }
 }
 </style>
@@ -470,9 +633,14 @@ html, body {
 <div class="row">
     <div class="col-sm-12">
         <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
+            <div class="card-header bg-primary text-white" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                 <div class="mb-0" style="font-size:20px;">
                     <i class="fas fa-sign-out-alt"></i> RIWAYAT PINJAM BARANG
+                </div>
+                <div class="card-tools" style="margin-top: 5px;">
+                    <a href="?page=master_data" class="btn btn-default btn-sm text-white" style="background: rgba(255,255,255,0.2);">
+                        <i class="fas fa-arrow-left"></i> Kembali
+                    </a>
                 </div>
             </div>
             <div class="card-body">
@@ -527,14 +695,21 @@ html, body {
                             $total_kembali = (int)($row['total_kembali'] ?? 0);
                             $sisa_belum_kembali = $row['jumlah_pinjam'] - $total_kembali;
                             
-                            
                             $tgl_perkiraan = (!empty($row['tgl_perkiraan_balik']) && $row['tgl_perkiraan_balik'] != "0000-00-00")
                                 ? date('d-m-Y', strtotime($row['tgl_perkiraan_balik']))
                                 : '-';
+                            
+                            // Status badge untuk mobile
+                            $status_badge = '';
+                            if ($status == 'Dipinjam') {
+                                $status_badge = '<span class="badge badge-warning" style="background:#ffc107; color:#333;">Dipinjam</span>';
+                            } else {
+                                $status_badge = '<span class="badge badge-success" style="background:#28a745; color:white;">Dikembalikan</span>';
+                            }
                         ?>
                             <tr>
                                 <td data-label="NO"><?= $no++; ?></td>
-                                <td data-label="NAMA PEMINJAM"><?= htmlspecialchars($row['nama_lengkap']); ?></td>
+                                <td data-label="NAMA PEMINJAM"><?= htmlspecialchars($row['nama_lengkap']); ?> </td>
                                 <td data-label="ID BARANG"><?= htmlspecialchars($row['id_barang']); ?></td>
                                 <td data-label="NAMA BARANG"><?= htmlspecialchars($row['nama_brg']); ?></td>
                                 <td data-label="SPESIFIKASI"><?= htmlspecialchars($row['spesifikasi_brg']); ?></td>
@@ -547,15 +722,18 @@ html, body {
                                     <?php else: ?>
                                         0 pcs
                                     <?php endif; ?>
-                                </td>
+                                 </td>
                                 <td data-label="TUJUAN"><?= htmlspecialchars($row['tujuan_gunabarang'] ?? '-'); ?></td>
                                 <td data-label="TGL PINJAM">
                                     <?= !empty($row['tgl_pinjam']) && $row['tgl_pinjam'] != "0000-00-00"
                                         ? date('d-m-Y', strtotime($row['tgl_pinjam']))
                                         : '-' ?>
-                                </td>
+                                 </td>
                                 <td data-label="PERKIRAAN KEMBALI"><?= $tgl_perkiraan; ?></td>
                                 <td data-label="AKSI">
+                                    <button type="button" class="btn-cetak" onclick="cetakStruk(<?= $row['id_pinjaman']; ?>)">
+                                        <i class="fas fa-print"></i> Cetak
+                                    </button>
                                     <button type="button" class="btn-edit" onclick="showEditModal(
                                         <?= $row['id_pinjaman']; ?>,
                                         '<?= htmlspecialchars($row['tujuan_gunabarang']); ?>',
@@ -652,6 +830,11 @@ function deleteData() {
 function closeDeleteModal() {
     document.getElementById('deleteModal').style.display = 'none';
     deleteId = null;
+}
+
+// Fungsi cetak struk
+function cetakStruk(id) {
+    window.open('cetak_struk.php?id=' + id, '_blank');
 }
 
 // Tutup modal jika klik di luar
