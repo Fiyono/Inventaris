@@ -215,6 +215,29 @@ html, body {
     transform: translateY(-1px);
 }
 
+/* Tombol Cetak Struk */
+.btn-cetak {
+    background: linear-gradient(45deg, #17a2b8, #138496);
+    color: #fff;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    text-decoration: none;
+    transition: 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-right: 5px;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-cetak:hover {
+    background: linear-gradient(45deg, #138496, #0f6674);
+    color: white;
+    transform: translateY(-1px);
+}
+
 /* Search & tombol sejajar */
 .dataTables_filter {
     display: flex !important;
@@ -321,9 +344,8 @@ html, body {
     cursor: pointer;
 }
 
-/* ========== RESPONSIVE MOBILE - TAMPILAN KARTU ========== */
+/* ========== RESPONSIVE MOBILE - TAMPILAN KARTU PROFESIONAL ========== */
 @media screen and (max-width: 768px) {
-    
     /* Sembunyikan header tabel di mobile */
     #example1 thead {
         display: none;
@@ -332,23 +354,31 @@ html, body {
     /* Setiap baris menjadi kartu */
     #example1 tbody tr {
         display: block;
-        border: 1px solid #dee2e6;
-        border-radius: 12px;
-        margin-bottom: 15px;
+        border: none;
+        border-radius: 16px;
+        margin-bottom: 20px;
         background: white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        padding: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        padding: 0;
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
     }
     
-    /* Setiap sel menjadi baris horizontal */
+    #example1 tbody tr:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    }
+    
+    /* Setiap sel menjadi baris horizontal dengan padding lebih rapi */
     #example1 tbody td {
         display: flex;
         justify-content: space-between;
         align-items: center;
         text-align: left !important;
-        padding: 8px 10px;
-        border-bottom: 1px solid #eee;
-        font-size: 12px;
+        padding: 12px 15px;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 13px;
+        background: white;
     }
     
     /* Hapus border-bottom untuk sel terakhir */
@@ -356,98 +386,208 @@ html, body {
         border-bottom: none;
     }
     
-    /* Label untuk setiap kolom */
+    /* Label untuk setiap kolom dengan warna lebih menarik */
     #example1 tbody td:before {
         content: attr(data-label);
-        font-weight: bold;
+        font-weight: 600;
         color: #007bff;
-        width: 40%;
-        font-size: 11px;
+        width: 35%;
+        font-size: 12px;
+        letter-spacing: 0.3px;
     }
     
-    /* Tombol aksi di mobile */
+    /* Style khusus untuk kolom NAMA (Pengambil) */
+    #example1 tbody td[data-label="NAMA"] .nama-badge {
+        background: #e7f3ff;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-weight: 600;
+        color: #007bff;
+    }
+    
+    /* Style khusus untuk jumlah diambil */
+    #example1 tbody td[data-label="JUMLAH DIAMBIL"] {
+        font-weight: 600;
+        color: #17a2b8;
+    }
+    
+    /* Style khusus untuk sisa barang */
+    #example1 tbody td[data-label="SISA BARANG"] {
+        font-weight: 600;
+        color: #28a745;
+    }
+    
+    /* Tombol aksi di mobile - lebih profesional */
     #example1 tbody td[data-label="AKSI"] {
         display: flex;
-        justify-content: flex-start;
-        gap: 8px;
+        justify-content: flex-end;
+        gap: 10px;
         flex-wrap: wrap;
+        background: #f8f9fa;
+        border-top: 1px solid #e9ecef;
+        margin-top: 5px;
     }
     
     #example1 tbody td[data-label="AKSI"]:before {
         content: "AKSI";
-        font-weight: bold;
+        font-weight: 600;
         color: #007bff;
-        width: 40%;
-        font-size: 11px;
+        width: auto;
+        margin-right: 15px;
     }
     
-    .btn-edit, .btn-hapus {
-        padding: 5px 10px;
-        font-size: 11px;
+    /* Tombol di mobile - lebih besar dan mudah disentuh */
+    .btn-edit, .btn-hapus, .btn-cetak {
+        padding: 8px 14px;
+        font-size: 12px;
+        border-radius: 25px;
+        margin: 0;
+        flex: 0 1 auto;
     }
     
-    /* Judul card lebih kecil */
-    .card-header .mb-0 {
-        font-size: 16px !important;
+    .btn-cetak {
+        background: linear-gradient(45deg, #17a2b8, #138496);
     }
     
-    /* Search dan export full width */
+    .btn-edit {
+        background: linear-gradient(45deg, #ffc107, #ff9800);
+    }
+    
+    .btn-hapus {
+        background: linear-gradient(45deg, #dc3545, #c82333);
+    }
+    
+    /* Header card lebih menarik */
+    .card-header .card-title {
+        font-size: 18px !important;
+    }
+    
+    /* Search box lebih mobile friendly */
     .dataTables_filter {
         flex-direction: column;
         align-items: stretch;
+        margin-bottom: 20px;
+        padding: 0 5px;
     }
     
     .dataTables_filter label {
         width: 100%;
         justify-content: space-between;
+        margin-bottom: 10px;
+        font-size: 13px;
     }
     
     .dataTables_filter input {
         flex: 1;
+        margin-left: 10px !important;
+        height: 40px;
+        font-size: 14px;
+        border-radius: 8px;
+        padding: 8px 12px;
     }
     
+    /* Tombol export */
     .btn-export {
         justify-content: center;
         width: 100%;
         margin-left: 0;
-        margin-top: 8px;
+        margin-top: 5px;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 13px;
     }
     
-    /* Pagination lebih kecil */
+    /* Pagination lebih mobile friendly */
+    .dataTables_paginate {
+        margin-top: 20px;
+        text-align: center;
+    }
+    
     .dataTables_paginate .paginate_button {
-        padding: 4px 8px !important;
-        font-size: 11px !important;
+        padding: 8px 12px !important;
+        font-size: 12px !important;
+        margin: 3px !important;
+        border-radius: 8px !important;
     }
     
     .dataTables_info {
         font-size: 11px;
+        text-align: center;
+        margin-bottom: 15px;
+        padding: 8px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    /* Foto di mobile */
+    .img-barang {
+        width: 45px;
+        height: 45px;
+        border-radius: 10px;
     }
     
     /* Modal di mobile */
     .modal-dialog {
-        margin: 10px;
-        width: calc(100% - 20px);
+        margin: 15px;
+        width: calc(100% - 30px);
         max-width: none;
     }
     
+    .modal-content {
+        border-radius: 16px;
+    }
+    
+    .modal-header {
+        padding: 15px;
+    }
+    
+    .modal-header h4 {
+        font-size: 16px;
+    }
+    
+    .modal-body {
+        padding: 15px;
+    }
+    
     .modal-body .form-group {
-        margin-bottom: 12px;
+        margin-bottom: 15px;
+    }
+    
+    .modal-body label {
+        font-size: 13px;
+        margin-bottom: 5px;
+    }
+    
+    .modal-body input, .modal-body textarea, .modal-body select {
+        font-size: 14px;
+        padding: 10px;
     }
     
     .modal-footer {
         flex-direction: column;
-        gap: 8px;
+        gap: 10px;
+        padding: 15px;
     }
     
     .modal-footer .btn {
         width: 100%;
         margin: 0;
+        padding: 10px;
+        border-radius: 8px;
     }
     
-    /* Foto di mobile */
-    .img-barang {
-        width: 40px;
-        height: 40px;
+    /* Badge untuk status */
+    .status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    
+    /* Spasi antar kartu */
+    #example1 tbody {
+        display: block;
     }
 }
 
@@ -466,12 +606,83 @@ html, body {
         font-size: 12px;
         padding: 8px 5px;
     }
+    
+    .btn-edit, .btn-hapus, .btn-cetak {
+        padding: 4px 10px;
+        font-size: 11px;
+    }
 }
 
 /* Desktop tetap tampil normal */
 @media screen and (min-width: 769px) {
     #example1 {
         width: 100% !important;
+    }
+    
+    #example1 thead {
+        display: table-header-group;
+    }
+    
+    #example1 tbody tr {
+        display: table-row;
+        border: none;
+        margin-bottom: 0;
+        padding: 0;
+        box-shadow: none;
+    }
+    
+    #example1 tbody td {
+        display: table-cell;
+        border-bottom: 1px solid #dee2e6;
+        text-align: center;
+    }
+    
+    #example1 tbody td:before {
+        display: none;
+    }
+    
+    .btn-edit, .btn-hapus, .btn-cetak {
+        width: auto;
+        padding: 5px 12px;
+    }
+}
+
+/* Layar sangat kecil (max 480px) */
+@media screen and (max-width: 480px) {
+    #example1 tbody td {
+        flex-wrap: wrap;
+        padding: 10px 12px;
+    }
+    
+    #example1 tbody td:before {
+        width: 100%;
+        margin-bottom: 6px;
+        font-size: 11px;
+    }
+    
+    #example1 tbody td[data-label="AKSI"] {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    #example1 tbody td[data-label="AKSI"]:before {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+    
+    #example1 tbody td[data-label="AKSI"] .btn-cetak,
+    #example1 tbody td[data-label="AKSI"] .btn-edit,
+    #example1 tbody td[data-label="AKSI"] .btn-hapus {
+        width: 100%;
+        justify-content: center;
+        margin: 4px 0;
+    }
+    
+    .modal-body .form-group input,
+    .modal-body .form-group textarea,
+    .modal-body .form-group select {
+        font-size: 14px;
+        padding: 10px;
     }
 }
 </style>
@@ -503,9 +714,8 @@ html, body {
                     </thead>
                     <tbody>
                         <?php 
-                        $no = 1; // Inisialisasi nomor urut
+                        $no = 1;
                         
-                        // QUERY YANG DIPERBAIKI - MENAMBAHKAN JOIN DENGAN tb_user
                         $sql = mysqli_query($koneksi, "
                             SELECT 
                                 a.id_ambil, 
@@ -518,6 +728,8 @@ html, body {
                                 b.gambar_brg, 
                                 b.barcode_brg, 
                                 b.nama_brg, 
+                                b.spesifikasi_brg,
+                                b.merk_brg,
                                 b.jumlah_brg as sisa,
                                 u.nama_lengkap
                             FROM tbl_ambil a
@@ -526,7 +738,6 @@ html, body {
                             ORDER BY a.id_ambil DESC
                         ");
                         
-                        // Cek apakah query berhasil
                         if (!$sql) {
                             echo "<tr><td colspan='11'>Error Query: " . mysqli_error($koneksi) . "</td></tr>";
                         }
@@ -538,10 +749,10 @@ html, body {
                             <tr>
                                 <td data-label="NO"><?= $no++; ?></td>
                                 <td data-label="NAMA">
-                                    <?= htmlspecialchars($row['nama_lengkap'] ?? '-'); ?>
+                                    <span><?= htmlspecialchars($row['nama_lengkap'] ?? '-'); ?></span>
                                 </td>
                                 <td data-label="ID BARANG">
-                                    <?= htmlspecialchars($row['id_brg']); ?>
+                                    <span><?= htmlspecialchars($row['id_brg']); ?></span>
                                 </td>
                                 <td data-label="FOTO BARANG">
                                     <?php if(!empty($row['gambar_brg']) && file_exists($gambar_path)): ?>
@@ -551,13 +762,13 @@ html, body {
                                     <?php endif; ?>
                                 </td>
                                 <td data-label="NAMA BARANG">
-                                    <?= htmlspecialchars($row['nama_brg']); ?>
+                                    <span><?= htmlspecialchars($row['nama_brg']); ?></span>
                                 </td>
                                 <td data-label="JUMLAH DIAMBIL">
-                                    <?= $row['diambil']; ?> pcs
+                                    <span><?= $row['diambil']; ?> pcs</span>
                                 </td>
                                 <td data-label="SISA BARANG">
-                                    <?= $row['sisa']; ?> pcs
+                                    <span><?= $row['sisa']; ?> pcs</span>
                                 </td>
                                 <td data-label="TUJUAN PENGGUNAAN">
                                     <?= htmlspecialchars($row['tujuan_gunabarang'] ?? '-'); ?>
@@ -569,6 +780,9 @@ html, body {
                                     <?= date('d-m-Y', strtotime($row['tgl_brg_keluar'])); ?>
                                 </td>
                                 <td data-label="AKSI">
+                                    <button type="button" class="btn-cetak" onclick="cetakStruk(<?= $row['id_ambil']; ?>)">
+                                        <i class="fas fa-print"></i> Cetak
+                                    </button>
                                     <button type="button" class="btn-edit" data-toggle="modal" data-target="#modal-edit-<?= $row['id_ambil'] ?>">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
@@ -679,7 +893,6 @@ html, body {
 let deleteId = null;
 let deleteJumlah = null;
 
-// Fungsi konfirmasi hapus dengan informasi jumlah
 function confirmDelete(id, jumlah) {
     deleteId = id;
     deleteJumlah = jumlah;
@@ -687,21 +900,22 @@ function confirmDelete(id, jumlah) {
     document.getElementById('deleteModal').style.display = 'flex';
 }
 
-// Fungsi hapus data
 function deleteData() {
     if (deleteId) {
         window.location.href = '?page=set_members&hapus=' + deleteId;
     }
 }
 
-// Fungsi tutup modal
 function closeModal() {
     document.getElementById('deleteModal').style.display = 'none';
     deleteId = null;
     deleteJumlah = null;
 }
 
-// Tutup modal jika klik di luar
+function cetakStruk(id) {
+    window.open('cetak_struk.php?jenis=ambil&id_ambil=' + id, '_blank');
+}
+
 document.addEventListener('click', function(event) {
     const modal = document.getElementById('deleteModal');
     if (event.target === modal) {
@@ -710,7 +924,6 @@ document.addEventListener('click', function(event) {
 });
 
 $(document).ready(function() {
-    // Fungsi tambah tombol export Excel
     function tambahTombolExport() {
         if ($('#btnExportExcel').length) return;
         

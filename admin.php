@@ -368,6 +368,13 @@ $page = isset($_GET['page']) ? $_GET['page'] : 'home';
                             </a>
                         </li>
 
+                        <li class="nav-item">
+                            <a href="?page=pengambilan" class="nav-link <?= ($page == 'pengambilan') ? 'active' : '' ?>">
+                                <i class="nav-icon fas fa-clipboard-list"></i>
+                                <p>PENGAMBILAN</p>
+                            </a>
+                        </li>
+
                         <!-- LOGOUT -->
                         <li class="nav-item">
                             <a href="logout.php" class="nav-link">
@@ -415,6 +422,7 @@ $page = isset($_GET['page']) ? $_GET['page'] : 'home';
                             case 'edit_riwayat_tambah': include 'admin/edit_riwayat_tambah.php'; break;
                             case 'cetak_struk': include 'admin/cetak_struk.php'; break;
                             case 'peminjaman': include 'admin/peminjaman.php'; break;
+                            case 'pengambilan': include 'admin/pengambilan.php'; break;
                             default:                 include 'admin/home.php'; break;
                         }
                         ?>
