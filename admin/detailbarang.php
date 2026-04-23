@@ -1,10 +1,10 @@
 <?php 
-// detail_barang.php - Merapihkan dan Memperbaiki Logika Perhitungan Stok
+// detail_barang.php - Detail Barang dengan Perhitungan Stok yang Benar
 
 if (isset($_GET['id'])) {
     $id_brg = mysqli_real_escape_string($koneksi, $_GET['id']);
     
-    // 1. Ambil data barang (Stok Total)
+    // 1. Ambil data barang (Stok saat ini)
     $sql_brg = mysqli_query($koneksi, "SELECT * FROM tbl_barang WHERE id_brg = '$id_brg'");
     $row = mysqli_fetch_array($sql_brg);
 
@@ -18,42 +18,82 @@ if (isset($_GET['id'])) {
     $catrg = mysqli_fetch_array($catrg_query);
     $nama_kategori = $catrg['nama_kategori'] ?? 'Tidak Diketahui';
 
-    // 3. Perbaikan Logika: Hitung pinjaman AKTIF
-    // Hanya menjumlahkan barang yang statusnya BUKAN 'dikembalikan'
+    // 3. Hitung TOTAL yang dipinjam (status 'Dipinjam' - belum lunas)
     $pin_query = mysqli_query($koneksi, "
-        SELECT 
-            COALESCE(SUM(jumlah_pinjam), 0) AS jml_pinjam 
+        SELECT COALESCE(SUM(jumlah_pinjam), 0) AS total_dipinjam
         FROM tbl_pinjaman 
-        WHERE id_brg = '$id_brg' AND status != 'dikembalikan'
+        WHERE id_brg = '$id_brg' AND status = 'Dipinjam'
     ");
     $pin = mysqli_fetch_array($pin_query);
+    $total_dipinjam = (int) $pin['total_dipinjam'];
     
-    $jml_pinjam = (int) $pin['jml_pinjam'];
+    // 4. Hitung TOTAL yang sudah dikembalikan (dari history untuk peminjaman aktif)
+    $kembali_query = mysqli_query($koneksi, "
+        SELECT COALESCE(SUM(h.jumlahbrg_kembali), 0) AS total_kembali
+        FROM tbl_history_pinjam h
+        JOIN tbl_pinjaman p ON h.id_pinjaman = p.id_pinjaman
+        WHERE p.id_brg = '$id_brg' AND p.status = 'Dipinjam'
+    ");
+    $kembali = mysqli_fetch_array($kembali_query);
+    $total_kembali = (int) $kembali['total_kembali'];
     
-    // Perhitungan Sisa Stok
-    $stok_total = (int) $row['jumlah_brg'];
-    $sisa = $stok_total - $jml_pinjam;
+    // 5. Hitung SISA yang BELUM dikembalikan (yang sedang dipinjam)
+    $sedang_dipinjam = $total_dipinjam - $total_kembali;
     
-    // Pastikan sisa stok tidak negatif (walaupun harusnya dicegah di proses pinjam/ambil)
-    $sisa = max(0, $sisa); 
-
+    // Stok Tersedia = Stok Fisik (karena stok fisik sudah mencerminkan stok yang tersedia)
+    $stok_tersedia = (int) $row['jumlah_brg'];
+    
     // Tentukan nilai max untuk form Ambil dan Pinjam
-    $max_stok_form = $sisa;
+    $max_stok_form = $stok_tersedia;
 ?>
 
-<div class="row">
-    <div class="col-sm-4 card p-3">
+<style>
+/* Detail Barang Mobile Responsive */
+@media (max-width: 768px) {
+    .detail-container {
+        flex-direction: column;
+    }
+    .detail-gambar {
+        margin-bottom: 15px;
+    }
+    .detail-info table {
+        font-size: 12px;
+    }
+    .detail-info th, .detail-info td {
+        padding: 8px 5px !important;
+    }
+    .btn-group-mobile {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+    }
+    .btn-group-mobile a {
+        margin-top: 0 !important;
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    .modal-content {
+        margin: 10px;
+    }
+}
+</style>
+
+<div class="row detail-container">
+    <div class="col-sm-12 col-md-4 card p-3 detail-gambar">
         <img src="dist/upload_img/<?= htmlspecialchars($row['gambar_brg']); ?>" 
              alt="<?= htmlspecialchars($row['nama_brg']); ?>" 
              width="100%" 
-             class="img-circle img-fluid rounded">
+             class="img-fluid rounded"
+             style="object-fit: cover; max-height: 300px;"
+             onerror="this.src='dist/upload_img/default.png'">
     </div>
 
-    <div class="col-sm-8 card p-3">
-        <table class="table table-striped table-valign-middle table-hover table-dark rounded">
+    <div class="col-sm-12 col-md-8 card p-3 detail-info">
+        <table class="table table-striped table-valign-middle table-hover table-bordered">
             <tbody>
                 <tr>
-                    <th class="col-3">ID BARANG</th>
+                    <th style="width: 35%;">ID BARANG</th>
                     <td>: <?= htmlspecialchars($row['id_brg']); ?></td>
                 </tr>
                 <tr>
@@ -84,39 +124,44 @@ if (isset($_GET['id'])) {
                     <td>: <?= htmlspecialchars($nama_kategori); ?></td>
                 </tr>
                 <tr>
-                    <th class="text">STOK SAAT INI</th>
+                    <th>SEDANG DIPINJAM</th>
                     <td>: 
-                        <span class="font-weight-bold"><?= number_format($stok_total); ?></span>
-                        (Dipinjam: <span class="text"><?= number_format($jml_pinjam); ?></span> | 
-                        Sisa: <span class="text"><?= number_format($sisa); ?></span>)
+                        <span><?= number_format($sedang_dipinjam); ?></span>
+                    </td>
+                </tr>
+                <tr>
+                    <th>STOK TERSEDIA</th>
+                    <td>: 
+                        <span><?= number_format($stok_tersedia); ?></span>
                     </td>
                 </tr>
             </tbody>
         </table>
 
-        <div class="form-group mt-3">
-            <a href="#" class="btn bg-indigo mt-2" data-toggle="modal" data-target="#modal-ambil">
+        <div class="form-group mt-3 btn-group-mobile">
+            <a href="#" class="btn bg-indigo" data-toggle="modal" data-target="#modal-ambil">
                 <i class="fas fa-level-down-alt"></i> AMBIL
             </a>
-            <a href="#" class="btn btn-info mt-2" data-toggle="modal" data-target="#modal-pinjam">
+            <a href="#" class="btn btn-info" data-toggle="modal" data-target="#modal-pinjam">
                 <i class="fas fa-box"></i> PINJAM
             </a>
-            <a href="#" class="btn btn-success mt-2" data-toggle="modal" data-target="#modal-tambah">
-                <i class="fas fa-plus-circle"></i> TAMBAH BARANG
+            <a href="#" class="btn btn-success" data-toggle="modal" data-target="#modal-tambah">
+                <i class="fas fa-plus-circle"></i> TAMBAH STOK
             </a>
-            <a href="admin.php" class="btn btn-primary mt-2">
+            <a href="admin.php" class="btn btn-primary">
                 <i class="fas fa-step-backward"></i> KEMBALI
             </a>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="modal-ambil">
+<!-- MODAL AMBIL BARANG -->
+<div class="modal fade" id="modal-ambil" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content bg-indigo">
             <div class="modal-header">
                 <h4 class="modal-title"><i class="fas fa-level-down-alt"></i> AMBIL BARANG</h4>
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body">
                 <form action="admin/proses/proses_ambil.php" method="post">
@@ -125,8 +170,8 @@ if (isset($_GET['id'])) {
 
                     <div class="form-group">
                         <label>NAMA USER</label>
-                        <select class="select2 form-control form-control-sm" name="id_user" required>
-                            <option>--PILIH--</option>";
+                        <select class="form-control select2" name="id_user" required style="width:100%;">
+                            <option value="">-- PILIH USER --</option>
                             <?php 
                             $user = mysqli_query($koneksi, "SELECT id_user, nama_lengkap FROM tb_user ORDER BY nama_lengkap");
                             while ($u = mysqli_fetch_array($user)) {
@@ -137,16 +182,16 @@ if (isset($_GET['id'])) {
                     </div>
                     <div class="form-group">
                         <label>TANGGAL BARANG KELUAR</label>
-                        <input type="date" name="tgl_brg_keluar" class="form-control form-control-sm" value="<?= date('Y-m-d'); ?>" required>
+                        <input type="date" name="tgl_brg_keluar" class="form-control" value="<?= date('Y-m-d'); ?>" required>
                     </div>
                     <div class="form-group">
                         <label>JUMLAH BARANG KELUAR</label>
-                        <input type="number" name="jumlah_brg" class="form-control form-control-sm" min="1" max="<?= $max_stok_form; ?>" required>
+                        <input type="number" name="jumlah_brg" class="form-control" min="1" max="<?= $max_stok_form; ?>" required>
                         <small class="text-white">Stok Tersedia: <?= $max_stok_form; ?></small>
                     </div>
                     <div class="form-group">
                         <label>ALAMAT RUANG PENGGUNAAN</label>
-                        <select class="form-control form-control-sm" name="alamat_ruang" required>
+                        <select class="form-control" name="alamat_ruang" required>
                             <option value="">-- PILIH RUANG --</option>
                             <option>RUANG LAB C1</option>
                             <option>RUANG LAB C2</option>
@@ -163,7 +208,7 @@ if (isset($_GET['id'])) {
                     </div>
                     <div class="form-group">
                         <label>TUJUAN PENGGUNAAN BARANG</label>
-                        <textarea name="tujuan_gunabarang" class="form-control form-control-sm" required></textarea>
+                        <textarea name="tujuan_gunabarang" class="form-control" rows="2" required></textarea>
                     </div>
                     <div class="text-right">
                         <button type="submit" name="simpanambil" class="btn btn-primary"><i class="fas fa-save"></i> SIMPAN</button>
@@ -175,12 +220,13 @@ if (isset($_GET['id'])) {
     </div>
 </div>
 
-<div class="modal fade" id="modal-pinjam">
+<!-- MODAL PINJAM BARANG -->
+<div class="modal fade" id="modal-pinjam" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content bg-info">
             <div class="modal-header">
                 <h4 class="modal-title"><i class="fas fa-box"></i> PINJAM BARANG</h4>
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body">
                 <form action="admin/proses/proses_pinjam.php" method="post">
@@ -189,8 +235,8 @@ if (isset($_GET['id'])) {
 
                     <div class="form-group">
                         <label>NAMA PEMINJAM</label>
-                        <select class="select2 form-control form-control-sm" name="id_user" required>
-                        <option>--PILIH--</option>";
+                        <select class="form-control select2" name="id_user" required style="width:100%;">
+                            <option value="">-- PILIH PEMINJAM --</option>
                             <?php 
                             $use = mysqli_query($koneksi, "SELECT id_user, nama_lengkap FROM tb_user ORDER BY nama_lengkap");
                             while ($p = mysqli_fetch_array($use)) {
@@ -201,30 +247,20 @@ if (isset($_GET['id'])) {
                     </div>
                     <div class="form-group">
                         <label>TANGGAL PINJAM</label>
-                        <input type="date" 
-                            name="tgl_pinjam" 
-                            id="tgl_pinjam"
-                            class="form-control form-control-sm" 
-                            value="<?= date('Y-m-d'); ?>" 
-                            required>
+                        <input type="date" name="tgl_pinjam" id="tgl_pinjam_modal" class="form-control" value="<?= date('Y-m-d'); ?>" required>
                     </div>
-
                     <div class="form-group">
                         <label>TANGGAL PERKIRAAN KEMBALI</label>
-                        <input type="date" 
-                            name="tgl_perkiraan_balik" 
-                            id="tgl_perkiraan_balik"
-                            class="form-control form-control-sm" 
-                            required>
+                        <input type="date" name="tgl_perkiraan_balik" id="tgl_perkiraan_balik_modal" class="form-control" required>
                     </div>
                     <div class="form-group">
                         <label>JUMLAH PINJAM</label>
-                        <input type="number" name="jumlah_brg" class="form-control form-control-sm" min="1" max="<?= $max_stok_form; ?>" required>
+                        <input type="number" name="jumlah_brg" class="form-control" min="1" max="<?= $max_stok_form; ?>" required>
                         <small class="text-white">Stok Tersedia: <?= $max_stok_form; ?></small>
                     </div>
                     <div class="form-group">
                         <label>TUJUAN PENGGUNAAN BARANG</label>
-                        <textarea name="tujuan_gunabarang" class="form-control form-control-sm" required></textarea>
+                        <textarea name="tujuan_gunabarang" class="form-control" rows="2" required></textarea>
                     </div>
                     <div class="text-right">
                         <button type="submit" name="simpanpinjam" class="btn btn-primary"><i class="fas fa-save"></i> SIMPAN</button>
@@ -236,12 +272,13 @@ if (isset($_GET['id'])) {
     </div>
 </div>
 
-<div class="modal fade" id="modal-tambah">
+<!-- MODAL TAMBAH STOK BARANG -->
+<div class="modal fade" id="modal-tambah" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content bg-success">
             <div class="modal-header">
-                <h4 class="modal-title"><i class="fas fa-plus-circle"></i> TAMBAH BARANG</h4>
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title"><i class="fas fa-plus-circle"></i> TAMBAH STOK BARANG</h4>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body">
                 <form action="admin/proses/proses_tambah.php" method="post">
@@ -253,19 +290,16 @@ if (isset($_GET['id'])) {
 
                     <div class="form-group">
                         <label>JUMLAH TAMBAHAN</label>
-                        <input type="number" name="jumlah_tambah" class="form-control form-control-sm" min="1" required>
+                        <input type="number" name="jumlah_tambah" class="form-control" min="1" required>
                     </div>
                     <div class="form-group">
                         <label>TANGGAL PENAMBAHAN</label>
-                        <input type="date" name="tgl_tambah" class="form-control form-control-sm" value="<?= date('Y-m-d'); ?>" required>
+                        <input type="date" name="tgl_tambah" class="form-control" value="<?= date('Y-m-d'); ?>" required>
                     </div>
                     <div class="form-group">
                         <label>KETERANGAN</label>
-                        <textarea id="keterangan"
-                            name="keterangan"
-                            class="form-control form-control-sm"
-                            placeholder="Contoh: Penambahan stok baru atau penggantian barang"
-                            required></textarea>
+                        <textarea name="keterangan" id="keterangan" class="form-control" rows="2" 
+                            placeholder="Contoh: Penambahan stok baru atau penggantian barang" required></textarea>
                     </div>
                     <div class="text-right">
                         <button type="submit" name="simpantambah" class="btn btn-primary"><i class="fas fa-save"></i> SIMPAN</button>
@@ -276,43 +310,53 @@ if (isset($_GET['id'])) {
         </div>
     </div>
 </div>
+
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-
-    const tglPinjam = document.getElementById("tgl_pinjam");
-    const tglKembali = document.getElementById("tgl_perkiraan_balik");
+    // Auto-set tanggal perkiraan kembali (H+7)
+    const tglPinjam = document.getElementById("tgl_pinjam_modal");
+    const tglKembali = document.getElementById("tgl_perkiraan_balik_modal");
 
     function setTanggalKembali() {
-        if (tglPinjam.value) {
+        if (tglPinjam && tglPinjam.value) {
             let date = new Date(tglPinjam.value);
             date.setDate(date.getDate() + 7);
-
             let year = date.getFullYear();
             let month = String(date.getMonth() + 1).padStart(2, '0');
             let day = String(date.getDate()).padStart(2, '0');
-
-            tglKembali.value = `${year}-${month}-${day}`;
+            if (tglKembali) {
+                tglKembali.value = `${year}-${month}-${day}`;
+            }
         }
     }
 
-    // Set otomatis saat halaman dibuka
-    setTanggalKembali();
+    if (tglPinjam) {
+        setTanggalKembali();
+        tglPinjam.addEventListener("change", setTanggalKembali);
+    }
 
-    // Update otomatis kalau tanggal pinjam diganti
-    tglPinjam.addEventListener("change", setTanggalKembali);
+    // Enter submit untuk textarea keterangan
+    const keterangan = document.getElementById("keterangan");
+    if (keterangan) {
+        keterangan.addEventListener("keydown", function(e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                this.form.submit();
+            }
+        });
+    }
 
-});
-
-
-
-document.getElementById("keterangan").addEventListener("keydown", function(e) {
-    if (e.key === "Enter") {
-        e.preventDefault(); // mencegah enter jadi baris baru
-        this.form.submit(); // submit form seperti klik OK
+    // Inisialisasi Select2
+    if (typeof $ !== 'undefined' && $.fn.select2) {
+        $('.select2').select2({
+            theme: 'bootstrap4',
+            width: '100%',
+            dropdownParent: $('.modal')
+        });
     }
 });
-
 </script>
+
 <?php 
 } // end isset
 ?>

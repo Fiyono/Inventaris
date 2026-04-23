@@ -1,5 +1,5 @@
 <?php 
-// proses_pinjam.php (DIPERBAIKI DENGAN LOGIKA PENGURANGAN STOK TOTAL)
+// proses_pinjam.php (DIPERBAIKI)
 // File ini mengurangi tbl_barang.jumlah_brg, sehingga proses pengembalian HARUS menambahnya kembali.
 
 include "../../koneksi.php";
@@ -42,16 +42,27 @@ if (isset($_POST['simpanpinjam'])) {
             throw new Exception("Data barang tidak ditemukan.");
         }
         
-        // Periksa ketersediaan barang (menggunakan tbl_barang.jumlah_brg yang sudah dikurangi pinjaman/ambil sebelumnya)
-        if ($brg['jumlah_brg'] < $jumlah_brg) {
-            $stok_sekarang = $brg['jumlah_brg'] ?? 0;
-            throw new Exception("Stok barang (tersedia: $stok_sekarang) tidak mencukupi untuk dipinjam!");
+        // Hitung stok yang sedang dipinjam (AKTIF)
+        $pinjam_query = mysqli_query($koneksi,
+            "SELECT COALESCE(SUM(jumlah_pinjam), 0) AS total_dipinjam 
+             FROM tbl_pinjaman 
+             WHERE id_brg='$id_brg' AND status='Dipinjam'"
+        );
+        $pinjam_data = mysqli_fetch_assoc($pinjam_query);
+        $total_dipinjam = $pinjam_data['total_dipinjam'];
+        
+        // Stok tersedia = stok fisik - stok yang sedang dipinjam
+        $stok_tersedia = $brg['jumlah_brg'] - $total_dipinjam;
+        
+        // Periksa ketersediaan barang
+        if ($stok_tersedia < $jumlah_brg) {
+            throw new Exception("Stok barang tidak mencukupi! Tersedia: $stok_tersedia, Diminta: $jumlah_brg");
         }
 
-        // Q1: Update Stok Barang (Pengurangan Stok Total)
-        // INI DILAKUKAN UNTUK MEMENUHI PERMINTAAN ANDA & MENJAGA KONSISTENSI DENGAN proses_ambil.php
+        // Q1: Update Stok Barang (Pengurangan Stok Fisik)
+        // CATATAN: Stok fisik berkurang, tapi nanti saat kembali akan ditambah lagi
         $update_stok = mysqli_query($koneksi,
-            "UPDATE tbl_barang SET jumlah_brg = jumlah_brg - '$jumlah_brg' WHERE id_brg='$id_brg'"
+            "UPDATE tbl_barang SET jumlah_brg = jumlah_brg - $jumlah_brg WHERE id_brg='$id_brg'"
         );
         if (!$update_stok) {
             throw new Exception("Gagal mengurangi stok barang.");
@@ -100,16 +111,16 @@ if (isset($_POST['simpanpinjam'])) {
         mysqli_commit($koneksi);
         
         echo "<script>
-            alert('Data pinjaman berhasil');
+            alert('Data pinjaman berhasil disimpan! Stok telah dikurangi.');
             document.location.href='../../admin.php?page=detailbarang&id=$id_brg';
         </script>";
 
     } catch (Exception $e) {
         // Jika terjadi kegagalan, Rollback perubahan
         mysqli_rollback($koneksi);
-        $message = "Gagal memproses pinjaman: " . $e->getMessage();
+        $message = addslashes($e->getMessage());
         echo "<script>
-            alert('$message');
+            alert('Gagal memproses pinjaman: $message');
             document.location.href='../../admin.php?page=detailbarang&id=$id_brg';
         </script>";
     }

@@ -1,27 +1,66 @@
 <?php
+// riwayat_pinjam.php - Menampilkan Riwayat Peminjaman (1 peminjaman = 1 baris)
 include "koneksi.php";
+
+// Proses Edit Data
+if (isset($_POST['edit_pinjaman'])) {
+    $id_pinjaman = (int) $_POST['id_pinjaman'];
+    $tujuan_gunabarang = mysqli_real_escape_string($koneksi, $_POST['tujuan_gunabarang']);
+    $tgl_perkiraan_balik = mysqli_real_escape_string($koneksi, $_POST['tgl_perkiraan_balik']);
+    
+    $query_update = mysqli_query($koneksi, "
+        UPDATE tbl_pinjaman 
+        SET tujuan_gunabarang = '$tujuan_gunabarang', 
+            tgl_perkiraan_balik = '$tgl_perkiraan_balik'
+        WHERE id_pinjaman = '$id_pinjaman'
+    ");
+    
+    if ($query_update) {
+        echo "<script>alert('Data berhasil diupdate!'); window.location.href='?page=riwayat_pinjam';</script>";
+    } else {
+        echo "<script>alert('Gagal mengupdate data!');</script>";
+    }
+}
 
 // Proses Hapus Data
 if (isset($_GET['hapus'])) {
-    $id_histpinjam = $_GET['hapus'];
+    $id_pinjaman = (int) $_GET['hapus'];
     
-    // Ambil data pinjaman sebelum dihapus untuk mengembalikan stok
-    $query_data = mysqli_query($koneksi, "SELECT id_brg, jumlahbrg_pinjam FROM tbl_history_pinjam WHERE id_histpinjam = '$id_histpinjam'");
-    $data_pinjam = mysqli_fetch_assoc($query_data);
+    // Mulai transaksi
+    mysqli_begin_transaction($koneksi);
     
-    if ($data_pinjam) {
-        $id_brg = $data_pinjam['id_brg'];
-        $jumlah_pinjam = $data_pinjam['jumlahbrg_pinjam'];
+    try {
+        // Ambil data pinjaman
+        $query_data = mysqli_query($koneksi, "
+            SELECT id_brg, jumlah_pinjam, status 
+            FROM tbl_pinjaman 
+            WHERE id_pinjaman = '$id_pinjaman'
+        ");
+        $data_pinjam = mysqli_fetch_assoc($query_data);
         
-        // Kembalikan stok barang
-        mysqli_query($koneksi, "UPDATE tbl_barang SET jumlah_brg = jumlah_brg + $jumlah_pinjam WHERE id_brg = '$id_brg'");
-    }
-    
-    $query_hapus = mysqli_query($koneksi, "DELETE FROM tbl_history_pinjam WHERE id_histpinjam = '$id_histpinjam'");
-    if ($query_hapus) {
-        echo "<script>alert('Data berhasil dihapus! Stok barang dikembalikan.'); window.location.href='?page=riwayat_pinjam';</script>";
-    } else {
-        echo "<script>alert('Gagal menghapus data!');</script>";
+        if ($data_pinjam && $data_pinjam['status'] == 'Dipinjam') {
+            $id_brg = $data_pinjam['id_brg'];
+            $jumlah_pinjam = $data_pinjam['jumlah_pinjam'];
+            
+            // Kembalikan stok barang
+            mysqli_query($koneksi, "UPDATE tbl_barang SET jumlah_brg = jumlah_brg + $jumlah_pinjam WHERE id_brg = '$id_brg'");
+        }
+        
+        // Hapus history pengembalian
+        mysqli_query($koneksi, "DELETE FROM tbl_history_pinjam WHERE id_pinjaman = '$id_pinjaman'");
+        
+        // Hapus pinjaman
+        $query_hapus = mysqli_query($koneksi, "DELETE FROM tbl_pinjaman WHERE id_pinjaman = '$id_pinjaman'");
+        if (!$query_hapus) {
+            throw new Exception("Gagal menghapus data");
+        }
+        
+        mysqli_commit($koneksi);
+        echo "<script>alert('Data berhasil dihapus!'); window.location.href='?page=riwayat_pinjam';</script>";
+        
+    } catch (Exception $e) {
+        mysqli_rollback($koneksi);
+        echo "<script>alert('Gagal menghapus data: " . addslashes($e->getMessage()) . "');</script>";
     }
 }
 ?>
@@ -80,27 +119,17 @@ html, body {
     background-color: #fafafa;
 }
 
-/* Badge status */
-.badge-pinjam {
-    background-color: #17a2b8;
-    color: white;
+.badge-parsial {
+    background-color: #ffc107;
+    color: #333;
     padding: 4px 10px;
     border-radius: 20px;
     font-size: 11px;
     display: inline-block;
 }
 
-.badge-kembali {
+.badge-lunas {
     background-color: #28a745;
-    color: white;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    display: inline-block;
-}
-
-.badge-belum {
-    background-color: #dc3545;
     color: white;
     padding: 4px 10px;
     border-radius: 20px;
@@ -204,6 +233,60 @@ html, body {
     padding: 12px 15px;
 }
 
+/* Modal Edit */
+.modal-edit {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.modal-content-edit {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    max-width: 500px;
+    width: 90%;
+    text-align: left;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.modal-content-edit h4 {
+    margin-bottom: 15px;
+    color: #ffc107;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.btn-edit-save {
+    background: #ffc107;
+    color: #333;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-edit-cancel {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
 /* Modal Hapus */
 .modal-confirm {
     position: fixed;
@@ -238,12 +321,6 @@ html, body {
     color: #555;
 }
 
-.modal-buttons {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-}
-
 .btn-confirm-yes {
     background: #dc3545;
     color: white;
@@ -262,15 +339,22 @@ html, body {
     cursor: pointer;
 }
 
-/* ========== RESPONSIVE MOBILE - TAMPILAN KARTU ========== */
+/* Info sisa */
+.info-sisa {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 6px 10px;
+    margin-top: 8px;
+    border-radius: 6px;
+    font-size: 11px;
+}
+
+/* ========== RESPONSIVE MOBILE ========== */
 @media screen and (max-width: 768px) {
-    
-    /* Sembunyikan header tabel di mobile */
     #example1 thead {
         display: none;
     }
     
-    /* Setiap baris menjadi kartu */
     #example1 tbody tr {
         display: block;
         border: 1px solid #dee2e6;
@@ -281,7 +365,6 @@ html, body {
         padding: 10px;
     }
     
-    /* Setiap sel menjadi baris horizontal */
     #example1 tbody td {
         display: flex;
         justify-content: space-between;
@@ -292,12 +375,10 @@ html, body {
         font-size: 12px;
     }
     
-    /* Hapus border-bottom untuk sel terakhir */
     #example1 tbody td:last-child {
         border-bottom: none;
     }
     
-    /* Label untuk setiap kolom */
     #example1 tbody td:before {
         content: attr(data-label);
         font-weight: bold;
@@ -306,7 +387,6 @@ html, body {
         font-size: 11px;
     }
     
-    /* Tombol aksi di mobile */
     #example1 tbody td[data-label="AKSI"] {
         display: flex;
         justify-content: flex-start;
@@ -327,13 +407,11 @@ html, body {
         font-size: 11px;
     }
     
-    /* Judul card lebih kecil */
     .card-header .card-title,
     .card-header .mb-0 {
         font-size: 16px !important;
     }
     
-    /* Search dan export full width */
     .dataTables_filter {
         flex-direction: column;
         align-items: stretch;
@@ -354,7 +432,6 @@ html, body {
         margin-left: 0;
     }
     
-    /* Pagination lebih kecil */
     .dataTables_paginate .paginate_button {
         padding: 4px 8px !important;
         font-size: 11px !important;
@@ -403,60 +480,90 @@ html, body {
                     <thead>
                         <tr>
                             <th>NO</th>
-                            <th>NAMA</th>
+                            <th>NAMA PEMINJAM</th>
                             <th>ID BARANG</th>
                             <th>NAMA BARANG</th>
-                            <th>TYPE</th>
+                            <th>SPESIFIKASI</th>
                             <th>MERK</th>
                             <th>JUMLAH PINJAM</th>
-                            <th>JUMLAH KEMBALI</th>
+                            <th>SUDAH KEMBALI</th>
+                            <th>SISA</th>
                             <th>TUJUAN</th>
-                            <th>TANGGAL PINJAM</th>
-                            <th>TANGGAL KEMBALI</th>
+                            <th>TGL PINJAM</th>
+                            <th>PERKIRAAN KEMBALI</th>
                             <th>AKSI</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php
                         $no = 1;
+                        // Ambil data dari tbl_pinjaman (1 peminjaman = 1 baris)
                         $sql = mysqli_query($koneksi, "
-                            SELECT p.*, 
-                                u.nama_lengkap, 
-                                b.nama_brg, 
-                                b.spesifikasi_brg, 
+                            SELECT 
+                                p.id_pinjaman,
+                                p.id_brg,
+                                p.id_user,
+                                p.tgl_pinjam,
+                                p.tgl_perkiraan_balik,
+                                p.jumlah_pinjam,
+                                p.tujuan_gunabarang,
+                                p.status,
+                                u.nama_lengkap,
+                                b.nama_brg,
+                                b.spesifikasi_brg,
                                 b.merk_brg,
-                                b.id_brg as id_barang
-                            FROM tbl_history_pinjam p
+                                b.id_brg as id_barang,
+                                COALESCE(SUM(h.jumlahbrg_kembali), 0) AS total_kembali
+                            FROM tbl_pinjaman p
                             JOIN tb_user u ON p.id_user = u.id_user
                             JOIN tbl_barang b ON p.id_brg = b.id_brg
-                            ORDER BY p.id_histpinjam DESC
+                            LEFT JOIN tbl_history_pinjam h ON h.id_pinjaman = p.id_pinjaman
+                            GROUP BY p.id_pinjaman
+                            ORDER BY p.id_pinjaman DESC
                         ");
+                        
                         while ($row = mysqli_fetch_assoc($sql)) {
-                            $tgl_kembali = ($row['tgl_kembali'] == "0000-00-00" || empty($row['tgl_kembali'])) 
-                                ? '<span class="badge-belum"><i class="fas fa-clock"></i> Belum Kembali</span>' 
-                                : date('d-m-Y', strtotime($row['tgl_kembali']));
+                            $status = $row['status'];
+                            $total_kembali = (int)($row['total_kembali'] ?? 0);
+                            $sisa_belum_kembali = $row['jumlah_pinjam'] - $total_kembali;
+                            
+                            
+                            $tgl_perkiraan = (!empty($row['tgl_perkiraan_balik']) && $row['tgl_perkiraan_balik'] != "0000-00-00")
+                                ? date('d-m-Y', strtotime($row['tgl_perkiraan_balik']))
+                                : '-';
                         ?>
                             <tr>
                                 <td data-label="NO"><?= $no++; ?></td>
-                                <td data-label="NAMA"><?= htmlspecialchars($row['nama_lengkap']); ?></td>
+                                <td data-label="NAMA PEMINJAM"><?= htmlspecialchars($row['nama_lengkap']); ?></td>
                                 <td data-label="ID BARANG"><?= htmlspecialchars($row['id_barang']); ?></td>
                                 <td data-label="NAMA BARANG"><?= htmlspecialchars($row['nama_brg']); ?></td>
-                                <td data-label="TYPE"><?= htmlspecialchars($row['spesifikasi_brg']); ?></td>
+                                <td data-label="SPESIFIKASI"><?= htmlspecialchars($row['spesifikasi_brg']); ?></td>
                                 <td data-label="MERK"><?= htmlspecialchars($row['merk_brg']); ?></td>
-                                <td data-label="JUMLAH PINJAM"><?= $row['jumlahbrg_pinjam']; ?> pcs</td>
-                                <td data-label="JUMLAH KEMBALI"><?= $row['jumlahbrg_kembali'] ?? '0'; ?> pcs</td>
+                                <td data-label="JUMLAH PINJAM"><?= $row['jumlah_pinjam']; ?> pcs</td>
+                                <td data-label="SUDAH KEMBALI"><?= $total_kembali; ?> pcs</td>
+                                <td data-label="SISA">
+                                    <?php if ($sisa_belum_kembali > 0 && $status != 'Dikembalikan'): ?>
+                                        <span><?= $sisa_belum_kembali; ?> pcs</span>
+                                    <?php else: ?>
+                                        0 pcs
+                                    <?php endif; ?>
+                                </td>
                                 <td data-label="TUJUAN"><?= htmlspecialchars($row['tujuan_gunabarang'] ?? '-'); ?></td>
-                                <td data-label="TANGGAL PINJAM">
+                                <td data-label="TGL PINJAM">
                                     <?= !empty($row['tgl_pinjam']) && $row['tgl_pinjam'] != "0000-00-00"
                                         ? date('d-m-Y', strtotime($row['tgl_pinjam']))
                                         : '-' ?>
                                 </td>
-                                <td data-label="TANGGAL KEMBALI"><?= $tgl_kembali; ?></td>
+                                <td data-label="PERKIRAAN KEMBALI"><?= $tgl_perkiraan; ?></td>
                                 <td data-label="AKSI">
-                                    <a href="?page=edit_riwayat_pinjam&id=<?= $row['id_histpinjam']; ?>" class="btn-edit">
+                                    <button type="button" class="btn-edit" onclick="showEditModal(
+                                        <?= $row['id_pinjaman']; ?>,
+                                        '<?= htmlspecialchars($row['tujuan_gunabarang']); ?>',
+                                        '<?= $row['tgl_perkiraan_balik']; ?>'
+                                    )">
                                         <i class="fas fa-edit"></i> Edit
-                                    </a>
-                                    <button type="button" class="btn-hapus" onclick="confirmDelete(<?= $row['id_histpinjam']; ?>)">
+                                    </button>
+                                    <button type="button" class="btn-hapus" onclick="confirmDelete(<?= $row['id_pinjaman']; ?>)">
                                         <i class="fas fa-trash"></i> Hapus
                                     </button>
                                 </td>
@@ -469,15 +576,39 @@ html, body {
     </div>
 </div>
 
+<!-- Modal Edit -->
+<div id="editModal" style="display: none;">
+    <div class="modal-edit">
+        <div class="modal-content-edit">
+            <h4><i class="fas fa-edit"></i> Edit Peminjaman</h4>
+            <form method="post" action="">
+                <input type="hidden" name="id_pinjaman" id="edit_id_pinjaman">
+                <div class="form-group">
+                    <label>Tujuan Penggunaan Barang</label>
+                    <textarea name="tujuan_gunabarang" id="edit_tujuan" class="form-control" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Tanggal Perkiraan Kembali</label>
+                    <input type="date" name="tgl_perkiraan_balik" id="edit_tgl_perkiraan" class="form-control" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-edit-cancel" onclick="closeEditModal()">Batal</button>
+                    <button type="submit" name="edit_pinjaman" class="btn-edit-save">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Konfirmasi Hapus -->
 <div id="deleteModal" style="display: none;">
     <div class="modal-confirm">
         <div class="modal-content-confirm">
             <h4><i class="fas fa-exclamation-triangle"></i> Konfirmasi Hapus</h4>
-            <p>Apakah Anda yakin ingin menghapus data pinjaman ini?<br>Stok barang akan dikembalikan.</p>
+            <p>Apakah Anda yakin ingin menghapus data peminjaman ini?</p>
             <div class="modal-buttons">
                 <button class="btn-confirm-yes" onclick="deleteData()">Ya, Hapus</button>
-                <button class="btn-confirm-no" onclick="closeModal()">Batal</button>
+                <button class="btn-confirm-no" onclick="closeDeleteModal()">Batal</button>
             </div>
         </div>
     </div>
@@ -490,6 +621,19 @@ html, body {
 
 <script>
 let deleteId = null;
+
+// Fungsi show modal edit
+function showEditModal(id, tujuan, tgl_perkiraan) {
+    document.getElementById('edit_id_pinjaman').value = id;
+    document.getElementById('edit_tujuan').value = tujuan;
+    document.getElementById('edit_tgl_perkiraan').value = tgl_perkiraan;
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+// Fungsi tutup modal edit
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
 
 // Fungsi konfirmasi hapus
 function confirmDelete(id) {
@@ -504,24 +648,29 @@ function deleteData() {
     }
 }
 
-// Fungsi tutup modal
-function closeModal() {
+// Fungsi tutup modal hapus
+function closeDeleteModal() {
     document.getElementById('deleteModal').style.display = 'none';
     deleteId = null;
 }
 
 // Tutup modal jika klik di luar
 document.addEventListener('click', function(event) {
-    const modal = document.getElementById('deleteModal');
-    if (event.target === modal) {
-        closeModal();
+    const editModal = document.getElementById('editModal');
+    const deleteModal = document.getElementById('deleteModal');
+    
+    if (event.target === editModal) {
+        closeEditModal();
+    }
+    if (event.target === deleteModal) {
+        closeDeleteModal();
     }
 });
 
 $(document).ready(function() {
     // fungsi buat tombol excel di sebelah search
     function tambahTombolExcel() {
-        if ($('#btnExportExcel').length) return; // jangan duplikat
+        if ($('#btnExportExcel').length) return;
         
         const tombol = $('<a>', {
             href: 'export_riwayat_pinjam_excel.php',
@@ -534,18 +683,15 @@ $(document).ready(function() {
         $('#example1_filter').append(tombol);
     }
 
-    // 🔹 1. Jika DataTable sudah aktif (dari template admin.php)
     if ($.fn.DataTable.isDataTable('#example1')) {
         tambahTombolExcel();
         return;
     }
 
-    // 🔹 2. Jika DataTable belum aktif, tunggu sampai aktif
     $('#example1').on('init.dt', function() {
         tambahTombolExcel();
     });
 
-    // 🔹 3. Fallback jika template aktifkan lewat delay
     const observer = new MutationObserver(function() {
         if ($.fn.DataTable.isDataTable('#example1')) {
             tambahTombolExcel();

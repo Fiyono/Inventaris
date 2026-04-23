@@ -1,137 +1,147 @@
 <?php
-// kas.php - Logika Pemrosesan Pengembalian Barang (FIX: Stok Ditambah Kembali)
+// kas.php - Logika Pemrosesan Pengembalian Barang (FIX: Mendukung Pengembalian Parsial)
 
 // Pastikan file koneksi.php sudah tersedia
 include "koneksi.php";
 
 // proses pengembalian
 if (isset($_POST['simpankembali'])) {
-    // 1. Ambil input dengan sanitasi dan casting
+    // 1. Ambil input dengan sanitasi
     $id_pinjaman    = isset($_POST['id_pinjaman']) ? (int) $_POST['id_pinjaman'] : 0;
-    // id_brg dan id_user akan digunakan dalam prepared statement, 
-    // namun kita masih memerlukan variabel ini. mysqli_real_escape_string tidak lagi krusial 
-    // untuk id_brg jika kita pakai prepared statement, tapi kita jaga tipenya string
     $id_brg         = isset($_POST['id_brg']) ? $_POST['id_brg'] : ''; 
     $id_user        = isset($_POST['id_user']) ? (int) $_POST['id_user'] : 0;
     $jumlah_kembali = isset($_POST['jumlah_brg']) ? (int) $_POST['jumlah_brg'] : 0;
-    $tgl_kembali = isset($_POST['tgl_kembali']) ? $_POST['tgl_kembali'] : '';
+    $tgl_kembali    = isset($_POST['tgl_kembali']) ? $_POST['tgl_kembali'] : '';
+    
+    // Validasi
     if ($tgl_kembali === '') {
         echo "<script>alert('Tanggal pengembalian wajib diisi.');history.back();</script>";
         exit;
     }
-    // 2. Validasi Kritis
     if ($id_pinjaman <= 0 || $id_brg === '' || $id_user <= 0 || $jumlah_kembali <= 0) {
         echo "<script>alert('Data pengembalian tidak valid.');history.back();</script>";
         exit;
     }
 
-    // 3. Mulai Transaksi untuk memastikan atomicity
+    // Mulai Transaksi
     mysqli_begin_transaction($koneksi);
 
     try {
-        // --- Q0: Ambil data pinjaman lama dengan Prepared Statement & LOCK FOR UPDATE ---
+        // Ambil data pinjaman dengan LOCK
         $stmt_getData = $koneksi->prepare("SELECT * FROM tbl_pinjaman WHERE id_pinjaman=? FOR UPDATE");
-        if (!$stmt_getData) {
-            throw new Exception('Error prepare getData: ' . $koneksi->error);
-        }
         $stmt_getData->bind_param("i", $id_pinjaman);
         $stmt_getData->execute();
         $getData = $stmt_getData->get_result();
         $dataPinjam = $getData->fetch_assoc();
         $stmt_getData->close();
         
-        if (!$dataPinjam || (isset($dataPinjam['status']) && strtolower($dataPinjam['status']) === 'dikembalikan')) {
-            $message = !$dataPinjam ? 'Data pinjaman tidak ditemukan.' : 'Pinjaman ini sudah dikembalikan sebelumnya.';
-            throw new Exception($message);
+        if (!$dataPinjam) {
+            throw new Exception('Data pinjaman tidak ditemukan.');
         }
         
-        // Cek pengembalian parsial (Jika tidak diizinkan, aktifkan validasi)
-        if ($jumlah_kembali != (int)$dataPinjam['jumlah_pinjam']) {
-             // Jika pengembalian parsial DILARANG, aktifkan baris ini:
-             // throw new Exception('Pengembalian harus dalam jumlah penuh: ' . $dataPinjam['jumlah_pinjam'] . ' unit.');
-        }
-
-        // --- Q1: Update status pinjaman di tbl_pinjaman (Prepared Statement) ---
-        $q1 = "UPDATE tbl_pinjaman 
-       SET status='dikembalikan', tgl_kembali=? 
-       WHERE id_pinjaman=?";
-        $stmt1 = $koneksi->prepare($q1);
-        $stmt1->bind_param("si", $tgl_kembali, $id_pinjaman);
-        $ok1 = $stmt1->execute();
-        $stmt1->close();
-        if (!$ok1) {
-            throw new Exception('Error update pinjaman: ' . $koneksi->error);
-        }
-
-        // --- Q2: KRUSIAL! Update stok barang (kembalikan jumlah) (Prepared Statement) ---
-        $q2 = "UPDATE tbl_barang SET jumlah_brg = jumlah_brg + ? WHERE id_brg=?";
-        $stmt2 = $koneksi->prepare($q2);
-        if (!$stmt2) {
-            throw new Exception('Error prepare stmt2: ' . $koneksi->error);
-        }
-        $stmt2->bind_param("is", $jumlah_kembali, $id_brg);
-        $ok2 = $stmt2->execute();
-        $stmt2->close();
-        if (!$ok2) {
-            throw new Exception('Error update barang: ' . $koneksi->error);
-        }
-
-        // --- Q3: Update/Insert History (Menggunakan Prepared Statement) ---
+        // Ambil data yang sudah dikembalikan sebelumnya dari history
+        $stmt_history = $koneksi->prepare("SELECT COALESCE(SUM(jumlahbrg_kembali), 0) AS total_kembali FROM tbl_history_pinjam WHERE id_pinjaman=?");
+        $stmt_history->bind_param("i", $id_pinjaman);
+        $stmt_history->execute();
+        $history_result = $stmt_history->get_result();
+        $history_data = $history_result->fetch_assoc();
+        $total_sudah_kembali = (int)($history_data['total_kembali'] ?? 0);
+        $stmt_history->close();
         
-        // 3.1 Cek History (Prepared Statement)
-        $q_cek = "SELECT id_histpinjam FROM tbl_history_pinjam WHERE id_pinjaman=? LIMIT 1 FOR UPDATE";
-        $stmt_cek = $koneksi->prepare($q_cek);
+        $jumlah_pinjam_awal = (int) $dataPinjam['jumlah_pinjam'];
+        $sisa_belum_kembali = $jumlah_pinjam_awal - $total_sudah_kembali;
+        
+        // Validasi jumlah kembali tidak melebihi sisa yang belum kembali
+        if ($jumlah_kembali > $sisa_belum_kembali) {
+            throw new Exception("Jumlah yang dikembalikan ($jumlah_kembali) melebihi sisa pinjaman yang belum dikembalikan ($sisa_belum_kembali)");
+        }
+        
+        if ($jumlah_kembali <= 0) {
+            throw new Exception("Jumlah pengembalian harus lebih dari 0");
+        }
+        
+        // Update stok barang (tambah stok sesuai yang dikembalikan)
+        $stmt_stok = $koneksi->prepare("UPDATE tbl_barang SET jumlah_brg = jumlah_brg + ? WHERE id_brg=?");
+        $stmt_stok->bind_param("is", $jumlah_kembali, $id_brg);
+        if (!$stmt_stok->execute()) {
+            throw new Exception('Gagal update stok barang: ' . $stmt_stok->error);
+        }
+        $stmt_stok->close();
+        
+        // Cek apakah pengembalian ini membuat pinjaman menjadi lunas
+        $total_kembali_setelah = $total_sudah_kembali + $jumlah_kembali;
+        $status_baru = ($total_kembali_setelah >= $jumlah_pinjam_awal) ? 'Dikembalikan' : 'Dipinjam';
+        
+        // Update status di tbl_pinjaman
+        if ($status_baru == 'Dikembalikan') {
+            // Jika lunas, update status dan tgl_kembali
+            $stmt_update = $koneksi->prepare("UPDATE tbl_pinjaman SET status='Dikembalikan', tgl_kembali=? WHERE id_pinjaman=?");
+            $stmt_update->bind_param("si", $tgl_kembali, $id_pinjaman);
+        } else {
+            // Jika belum lunas, hanya update tgl_kembali terakhir (opsional)
+            $stmt_update = $koneksi->prepare("UPDATE tbl_pinjaman SET tgl_kembali=? WHERE id_pinjaman=?");
+            $stmt_update->bind_param("si", $tgl_kembali, $id_pinjaman);
+        }
+        
+        if (!$stmt_update->execute()) {
+            throw new Exception('Gagal update status pinjaman: ' . $stmt_update->error);
+        }
+        $stmt_update->close();
+        
+        // Cek apakah sudah ada history untuk pinjaman ini
+        $stmt_cek = $koneksi->prepare("SELECT id_histpinjam FROM tbl_history_pinjam WHERE id_pinjaman=?");
         $stmt_cek->bind_param("i", $id_pinjaman);
         $stmt_cek->execute();
-        $cekHistory = $stmt_cek->get_result(); 
+        $cekHistory = $stmt_cek->get_result();
         $stmt_cek->close();
-
+        
         if (mysqli_num_rows($cekHistory) == 0) {
-            // 3.2 Jika BELUM ada history, lakukan INSERT
-            $jml_pinjam_original = (int) $dataPinjam['jumlah_pinjam'];
+            // Insert history baru (pengembalian pertama)
             $tujuan = $dataPinjam['tujuan_gunabarang'];
             $tgl_pinjam = $dataPinjam['tgl_pinjam'];
-
-            $q3_insert = "INSERT INTO tbl_history_pinjam
-            (id_pinjaman, id_user, id_brg, jumlahbrg_pinjam, jumlahbrg_kembali, tujuan_gunabarang, tgl_pinjam, tgl_kembali)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-            $stmt3_insert = $koneksi->prepare($q3_insert);
-            if (!$stmt3_insert) {
-                throw new Exception('Error prepare insert history: ' . $koneksi->error);
-            }
-            $stmt3_insert->bind_param(
+            
+            $stmt_insert = $koneksi->prepare("INSERT INTO tbl_history_pinjam
+                (id_pinjaman, id_user, id_brg, jumlahbrg_pinjam, jumlahbrg_kembali, tujuan_gunabarang, tgl_pinjam, tgl_kembali)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt_insert->bind_param(
                 "iiisisss", 
                 $id_pinjaman, $id_user, $id_brg, 
-                $jml_pinjam_original,
+                $jumlah_pinjam_awal,
                 $jumlah_kembali,
                 $tujuan,
                 $tgl_pinjam,
                 $tgl_kembali
             );
-            
-            $ok3 = $stmt3_insert->execute();
-            $stmt3_insert->close();
-            if (!$ok3) {
-                throw new Exception('Error execute insert history: ' . $koneksi->error);
+            if (!$stmt_insert->execute()) {
+                throw new Exception('Gagal insert history: ' . $stmt_insert->error);
             }
+            $stmt_insert->close();
         } else {
-            // 3.3 Jika SUDAH ada history, lakukan UPDATE
-            $q3_update = "UPDATE tbl_history_pinjam
-              SET jumlahbrg_kembali=?, tgl_kembali=?
-              WHERE id_pinjaman=?";
-            $stmt3_update = $koneksi->prepare($q3_update);
-            $stmt3_update->bind_param("isi", $jumlah_kembali, $tgl_kembali, $id_pinjaman);
-
-            $ok3 = $stmt3_update->execute();
-            $stmt3_update->close();
-            if (!$ok3) {
-                throw new Exception('Error execute update history: ' . $koneksi->error);
+            // Update history existing (tambah jumlah kembali)
+            $stmt_update_hist = $koneksi->prepare("UPDATE tbl_history_pinjam 
+                SET jumlahbrg_kembali = jumlahbrg_kembali + ?, 
+                    tgl_kembali = ?
+                WHERE id_pinjaman = ?");
+            $stmt_update_hist->bind_param("isi", $jumlah_kembali, $tgl_kembali, $id_pinjaman);
+            if (!$stmt_update_hist->execute()) {
+                throw new Exception('Gagal update history: ' . $stmt_update_hist->error);
             }
+            $stmt_update_hist->close();
         }
-
+        
+        // Commit transaksi
         mysqli_commit($koneksi);
+        
+        // Pesan sukses
+        if ($status_baru == 'Dikembalikan') {
+            $message = "Pengembalian berhasil! Seluruh pinjaman ($jumlah_kembali pcs) telah lunas.";
+        } else {
+            $sisa = $jumlah_pinjam_awal - ($total_sudah_kembali + $jumlah_kembali);
+            $message = "Pengembalian $jumlah_kembali pcs berhasil. Sisa pinjaman yang belum dikembalikan: $sisa pcs.";
+        }
+        
         echo "<script>
-                  alert('Barang berhasil dikembalikan & stok bertambah.');
+                  alert('$message');
                   window.location.href='admin.php?page=kas';
               </script>";
         exit;
@@ -294,6 +304,16 @@ html, body {
     border-radius: 20px;
 }
 
+/* Info sisa pinjaman */
+.info-sisa {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 8px 12px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
 /* ========== RESPONSIVE MOBILE ========== */
 @media screen and (max-width: 768px) {
     #example1 thead {
@@ -451,6 +471,8 @@ html, body {
                             <th>ID BARANG</th>
                             <th>TANGGAL PINJAM</th>
                             <th>JUMLAH PINJAM</th>
+                            <th>SUDAH KEMBALI</th>
+                            <th>SISA</th>
                             <th>TUJUAN PENGGUNAAN</th>
                             <th>AKSI</th>
                         </tr>
@@ -461,21 +483,26 @@ html, body {
                         $no = 1;
                         $sql = mysqli_query($koneksi, "
                             SELECT 
-                                x.id_pinjaman, x.id_brg, x.id_user, x.tgl_pinjam, x.jumlah_pinjam, x.tujuan_gunabarang,
+                                x.id_pinjaman, x.id_brg, x.id_user, x.tgl_pinjam, x.jumlah_pinjam, x.tujuan_gunabarang, x.status,
                                 y.nama_brg, y.gambar_brg,
-                                u.nama_lengkap
+                                u.nama_lengkap,
+                                COALESCE(SUM(h.jumlahbrg_kembali), 0) AS total_kembali
                             FROM tbl_pinjaman x
                             INNER JOIN tbl_barang y ON y.id_brg = x.id_brg
                             INNER JOIN tb_user u ON u.id_user = x.id_user
-                            WHERE x.status != 'dikembalikan'
+                            LEFT JOIN tbl_history_pinjam h ON h.id_pinjaman = x.id_pinjaman
+                            WHERE x.status != 'Dikembalikan'
+                            GROUP BY x.id_pinjaman
                             ORDER BY x.id_pinjaman DESC
                         ");
                         if (!$sql) {
-                            echo "<td><td colspan='9'>Error: " . mysqli_error($koneksi) . "</td></tr>";
+                            echo "<tr><td colspan='11'>Error: " . mysqli_error($koneksi) . "</td></tr>";
                         } else {
                             while ($row = mysqli_fetch_array($sql)) { 
                                 $gambar_path = $root_path . '/dist/upload_img/' . $row['gambar_brg'];
                                 $gambar_web = '/inventaris/dist/upload_img/' . $row['gambar_brg'];
+                                $sudah_kembali = (int)($row['total_kembali'] ?? 0);
+                                $sisa_belum_kembali = (int)($row['jumlah_pinjam'] - $sudah_kembali);
                             ?>
                             <tr>
                                 <td data-label="NO"><?= $no++; ?></td>
@@ -491,6 +518,10 @@ html, body {
                                 <td data-label="ID BARANG"><?= htmlspecialchars($row['id_brg']); ?></td>
                                 <td data-label="TANGGAL PINJAM"><?= date('d-m-Y', strtotime($row['tgl_pinjam'])); ?></td>
                                 <td data-label="JUMLAH PINJAM"><?= htmlspecialchars($row['jumlah_pinjam']); ?> pcs</td>
+                                <td data-label="SUDAH KEMBALI"><?= $sudah_kembali; ?> pcs</td>
+                                <td data-label="SISA">
+                                    <span><?= $sisa_belum_kembali; ?> pcs</span>
+                                </td>
                                 <td data-label="TUJUAN"><?= htmlspecialchars($row['tujuan_gunabarang']); ?></td>
                                 <td data-label="AKSI">
                                     <a href="#" class="btn-kembali" data-toggle="modal" data-target="#modal-success<?= $row['id_pinjaman']; ?>">
@@ -522,7 +553,13 @@ html, body {
                                                     <?php endif; ?>
                                                 </div>
                                                 <p><strong>Barang:</strong> <?= htmlspecialchars($row['nama_brg']); ?></p>
-                                                <p class="mb-3"><strong>Dipinjam oleh:</strong> <?= htmlspecialchars($row['nama_lengkap']); ?></p>
+                                                <p><strong>Dipinjam oleh:</strong> <?= htmlspecialchars($row['nama_lengkap']); ?></p>
+                                                
+                                                <div class="info-sisa">
+                                                    <i class="fas fa-info-circle"></i> 
+                                                    Sudah dikembalikan: <strong><?= $sudah_kembali; ?></strong> pcs<br>
+                                                    Sisa belum kembali: <strong class="text-warning"><?= $sisa_belum_kembali; ?></strong> pcs
+                                                </div>
 
                                                 <input type="hidden" name="id_pinjaman" value="<?= $row['id_pinjaman'] ?>">
                                                 <input type="hidden" name="id_brg" value="<?= $row['id_brg']; ?>">
@@ -534,11 +571,11 @@ html, body {
                                                     </label>
                                                     <input type="number" name="jumlah_brg" class="form-control" 
                                                             min="1" 
-                                                            max="<?= $row['jumlah_pinjam']; ?>" 
-                                                            value="<?= $row['jumlah_pinjam']; ?>" 
+                                                            max="<?= $sisa_belum_kembali; ?>" 
+                                                            value="<?= $sisa_belum_kembali; ?>" 
                                                             required
                                                             id="jumlah_brg_<?= $row['id_pinjaman']; ?>">
-                                                    <small class="text-muted">Maksimal: <?= $row['jumlah_pinjam']; ?> pcs</small>
+                                                    <small class="text-muted">Maksimal: <?= $sisa_belum_kembali; ?> pcs</small>
                                                 </div>
                                                 
                                                 <div class="form-group">
@@ -593,7 +630,6 @@ $(document).ready(function() {
             html: '<i class="fas fa-file-excel"></i> Export Excel'
         });
         
-        // Cari container filter
         let filterContainer = $('#example1_filter');
         if (!filterContainer.length) {
             filterContainer = $('.dataTables_filter');
@@ -602,7 +638,6 @@ $(document).ready(function() {
         if (filterContainer.length) {
             filterContainer.append(tombol);
         } else {
-            // Tunggu sampai DataTable selesai loading
             setTimeout(function() {
                 let filterContainer2 = $('#example1_filter');
                 if (!filterContainer2.length) {
@@ -615,10 +650,7 @@ $(document).ready(function() {
         }
     }
     
-    // Cek apakah DataTable sudah ada (dari admin.php)
-    // JANGAN inisialisasi ulang! Cukup tambah tombol export saja.
     if ($('#example1').length) {
-        // Tunggu sebentar agar DataTable dari admin.php selesai loading
         setTimeout(function() {
             tambahTombolExport();
         }, 300);
