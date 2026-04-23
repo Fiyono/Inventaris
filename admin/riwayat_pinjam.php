@@ -637,11 +637,6 @@ html, body {
                 <div class="mb-0" style="font-size:20px;">
                     <i class="fas fa-sign-out-alt"></i> RIWAYAT PINJAM BARANG
                 </div>
-                <div class="card-tools" style="margin-top: 5px;">
-                    <a href="?page=master_data" class="btn btn-default btn-sm text-white" style="background: rgba(255,255,255,0.2);">
-                        <i class="fas fa-arrow-left"></i> Kembali
-                    </a>
-                </div>
             </div>
             <div class="card-body">
                 <table id="example1" class="table table-sm table-hover table-bordered table-striped">

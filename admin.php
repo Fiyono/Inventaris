@@ -375,6 +375,13 @@ $page = isset($_GET['page']) ? $_GET['page'] : 'home';
                             </a>
                         </li>
 
+                        <li class="nav-item">
+                            <a href="?page=prioritas_stok" class="nav-link <?= ($page == 'prioritas_stok') ? 'active' : '' ?>">
+                                <i class="nav-icon fas fa-cart-plus"></i>
+                                <p>DAFTAR BELANJA</p>
+                            </a>
+                        </li>
+
                         <!-- LOGOUT -->
                         <li class="nav-item">
                             <a href="logout.php" class="nav-link">
@@ -422,6 +429,7 @@ $page = isset($_GET['page']) ? $_GET['page'] : 'home';
                             case 'edit_riwayat_tambah': include 'admin/edit_riwayat_tambah.php'; break;
                             case 'cetak_struk': include 'admin/cetak_struk.php'; break;
                             case 'peminjaman': include 'admin/peminjaman.php'; break;
+                            case 'prioritas_stok':  include 'admin/prioritas_stok.php'; break;
                             case 'pengambilan': include 'admin/pengambilan.php'; break;
                             default:                 include 'admin/home.php'; break;
                         }
