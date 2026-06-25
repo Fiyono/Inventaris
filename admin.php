@@ -508,11 +508,34 @@ $page = isset($_GET['page']) ? $_GET['page'] : 'home';
     <script src="plugins/select2/js/select2.full.min.js"></script>
 
     <script>
-        $(document).ready(function () {
 
-            // SELECT2
+        // $(document).ready(function () {
+        //     // SELECT2
+        //     $(".select2").select2();
+        //     $(".select2bs4").select2({ theme: 'bootstrap4' });
+
+
+        $(document).ready(function () {
+            // SELECT2 - Inisialisasi dasar
             $(".select2").select2();
             $(".select2bs4").select2({ theme: 'bootstrap4' });
+            
+            // Inisialisasi Select2 untuk halaman peminjaman (dengan delay)
+            setTimeout(function() {
+                if ($('.select2-barang').length > 0) {
+                    $('.select2-barang').each(function() {
+                        if (!$(this).hasClass('select2-hidden-accessible')) {
+                            $(this).select2({
+                                theme: 'bootstrap4',
+                                width: '100%',
+                                placeholder: '-- Cari & Pilih Barang --',
+                                allowClear: true
+                            });
+                        }
+                    });
+                    console.log('Select2 barang diinisialisasi dari layout');
+                }
+            }, 500);
 
             // DATATABLE #example1
             if ($('#example1').length) {

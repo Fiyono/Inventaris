@@ -86,7 +86,7 @@ if (isset($_POST['simpan_ambil'])) {
         $struk_data = base64_encode(json_encode([
             'nomor' => 'AMB/' . date('Ymd') . '/' . rand(1000, 9999),
             'tanggal' => $tgl_brg_keluar,
-            'pengambil' => $nama_pengambil,  // key ini yang digunakan
+            'pengambil' => $nama_pengambil,
             'tujuan' => $tujuan_gunabarang,
             'alamat_ruang' => $alamat_ruang,
             'barang' => $list_barang,
@@ -95,11 +95,10 @@ if (isset($_POST['simpan_ambil'])) {
         ]));
         
         // Redirect ke halaman struk
-        // Redirect ke halaman struk
-            echo "<script>
+        echo "<script>
             alert('Berhasil mengambil $success_count barang!');
             window.location.href = 'cetak_struk.php?jenis=ambil&data=" . urlencode($struk_data) . "&auto_print=1';
-            </script>";
+        </script>";
         exit;
         
     } catch (Exception $e) {
@@ -122,12 +121,29 @@ $barang_query = mysqli_query($koneksi, "
     WHERE b.jumlah_brg > 0
     ORDER BY b.nama_brg ASC
 ");
+
+// Siapkan data barang dalam bentuk array untuk JavaScript
+$barang_list = [];
+mysqli_data_seek($barang_query, 0);
+while ($brg = mysqli_fetch_array($barang_query)) {
+    $stok_tersedia = $brg['jumlah_brg'];
+    $gambar = !empty($brg['gambar_brg']) ? $brg['gambar_brg'] : 'default.png';
+    $barang_list[] = [
+        'id' => $brg['id_brg'],
+        'nama' => $brg['nama_brg'],
+        'spesifikasi' => $brg['spesifikasi_brg'],
+        'merk' => $brg['merk_brg'],
+        'stok' => $stok_tersedia,
+        'gambar' => $gambar
+    ];
+}
+$barang_json = json_encode($barang_list);
 ?>
 
 <style>
 /* ========== STYLE PENGAMBILAN - RESPONSIF MOBILE ========== */
 
-/* Style Desktop (default) */
+/* Style Desktop */
 .barang-gambar {
     width: 60px;
     height: 60px;
@@ -137,12 +153,10 @@ $barang_query = mysqli_query($koneksi, "
     cursor: pointer;
     transition: transform 0.2s;
 }
-
 .barang-gambar:hover {
     transform: scale(1.05);
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
-
 .btn-group-custom {
     display: flex;
     gap: 10px;
@@ -150,111 +164,85 @@ $barang_query = mysqli_query($koneksi, "
     margin-top: 15px;
     flex-wrap: wrap;
 }
-
 .btn-group-custom button {
     padding: 8px 20px;
 }
+.btn-tambah-desktop { display: inline-block; }
+.btn-tambah-mobile { display: none; }
 
-/* Tombol tambah desktop selalu tampil */
-.btn-tambah-desktop {
-    display: inline-flex !important;
-    align-items: center;
-    gap: 5px;
+/* Style Select2 */
+.select2-container .select2-selection--single {
+    height: 38px !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 36px !important;
+    padding-left: 12px !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px !important;
+}
+#tblBarang td .select2-container {
+    width: 100% !important;
+    min-width: 150px !important;
 }
 
-.btn-tambah-mobile {
-    display: none;
-}
-
-/* Tombol tambah di header tabel */
-.btn-tambah-header {
-    background: #28a745;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 12px;
-}
-
-.btn-tambah-header:hover {
-    background: #218838;
-}
-
-/* ========== RESPONSIF MOBILE ========== */
+/* ========== RESPONSIF MOBILE (max 768px) ========== */
 @media only screen and (max-width: 768px) {
     .card {
-        margin: 10px;
+        margin: 5px;
         border-radius: 10px;
     }
-    
     .card-header {
-        padding: 12px 15px;
+        padding: 10px 12px;
     }
-    
     .card-header .card-title {
-        font-size: 16px !important;
+        font-size: 15px !important;
     }
-    
     .card-body {
-        padding: 15px;
+        padding: 12px;
     }
     
     .form-group {
-        margin-bottom: 15px;
+        margin-bottom: 12px;
     }
-    
     .form-group label {
-        font-size: 13px;
-        margin-bottom: 5px;
-        display: block;
+        font-size: 12px;
+        margin-bottom: 4px;
     }
-    
-    .form-control, .form-control-sm {
-        font-size: 14px;
+    .form-control {
+        font-size: 13px;
         padding: 8px 10px;
         height: auto;
     }
     
-    select.form-control {
-        font-size: 14px;
-        padding: 8px 10px;
+    .btn-tambah-desktop { display: none !important; }
+    .btn-tambah-mobile { 
+        display: block; 
+        width: 100%; 
+        margin-bottom: 12px;
+        font-size: 13px;
+        padding: 10px;
     }
     
-    /* Sembunyikan tombol tambah desktop di mobile */
-    .btn-tambah-desktop {
-        display: none !important;
-    }
-    
-    /* Tampilkan tombol tambah mobile */
-    .btn-tambah-mobile {
-        display: block;
-        width: 100%;
-        margin-bottom: 15px;
-    }
-    
+    /* Tabel mobile card view */
     .table-responsive {
         overflow-x: visible !important;
         border: none;
     }
-    
     #tblBarang {
         width: 100%;
         border: none;
     }
-    
-    #tblBarang thead {
-        display: none;
-    }
+    #tblBarang thead { display: none; }
     
     #tblBarang tbody tr {
         display: block;
         border: 1px solid #ddd;
         border-radius: 10px;
-        margin-bottom: 15px;
+        margin-bottom: 12px;
         background: white;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        padding: 10px;
+        padding: 8px;
         position: relative;
     }
     
@@ -263,236 +251,169 @@ $barang_query = mysqli_query($koneksi, "
         justify-content: space-between;
         align-items: center;
         text-align: left !important;
-        padding: 10px 8px;
+        padding: 8px 6px;
         border: none;
         border-bottom: 1px solid #f0f0f0;
-        font-size: 13px;
-        gap: 10px;
+        font-size: 12px;
+        gap: 8px;
     }
+    #tblBarang tbody td:last-child { border-bottom: none; }
     
-    #tblBarang tbody td:last-child {
-        border-bottom: none;
-    }
-    
+    /* Label mobile */
     #tblBarang tbody td:before {
         content: attr(data-label);
         font-weight: bold;
         color: #17a2b8;
         width: 35%;
-        font-size: 12px;
+        font-size: 11px;
         flex-shrink: 0;
     }
     
+    /* Kolom No */
     #tblBarang tbody td:first-child {
         font-weight: bold;
-        background: #f8f9fa;
+        background: #f0f9ff;
         border-radius: 6px;
-        margin-bottom: 5px;
+        margin-bottom: 4px;
+        font-size: 13px;
     }
-    
     #tblBarang tbody td:first-child:before {
         content: "No. Urut";
     }
     
-    #tblBarang tbody td:nth-child(2):before {
-        content: "Gambar";
+    /* Kolom Gambar */
+    #tblBarang tbody td:nth-child(2) { justify-content: flex-start; }
+    #tblBarang tbody td:nth-child(2):before { content: "Gambar"; }
+    .barang-gambar { width: 45px; height: 45px; }
+    
+    /* Kolom Nama Barang */
+    #tblBarang tbody td:nth-child(3):before { content: "Nama Barang"; }
+    #tblBarang tbody td:nth-child(3) .select2-container { width: 60% !important; }
+    
+    /* Kolom Spesifikasi */
+    #tblBarang tbody td:nth-child(4):before { content: "Spesifikasi"; }
+    #tblBarang tbody td:nth-child(4) { word-break: break-word; }
+    
+    /* Kolom Merk */
+    #tblBarang tbody td:nth-child(5):before { content: "Merk"; }
+    
+    /* Kolom Stok */
+    #tblBarang tbody td:nth-child(6):before { content: "Stok"; }
+    
+    /* Kolom Jumlah */
+    #tblBarang tbody td:nth-child(7):before { content: "Jumlah Ambil"; }
+    #tblBarang tbody td:nth-child(7) input { width: 60%; font-size: 12px; }
+    
+    /* Kolom Aksi */
+    #tblBarang tbody td:last-child { justify-content: flex-end; }
+    #tblBarang tbody td:last-child:before { content: "Aksi"; }
+    #tblBarang tbody td:last-child button { 
+        width: auto; 
+        padding: 5px 12px; 
+        font-size: 11px;
     }
     
-    #tblBarang tbody td:nth-child(2) {
-        justify-content: flex-start;
-    }
-    
-    .barang-gambar {
-        width: 50px;
-        height: 50px;
-    }
-    
-    #tblBarang tbody td:nth-child(3):before {
-        content: "Nama Barang";
-    }
-    
-    #tblBarang tbody td:nth-child(3) select {
-        width: 65%;
-        font-size: 13px;
-    }
-    
-    #tblBarang tbody td:nth-child(4):before {
-        content: "Spesifikasi";
-    }
-    
-    #tblBarang tbody td:nth-child(4) {
-        word-break: break-word;
-    }
-    
-    #tblBarang tbody td:nth-child(5):before {
-        content: "Merk";
-    }
-    
-    #tblBarang tbody td:nth-child(6):before {
-        content: "Stok Tersedia";
-    }
-    
-    #tblBarang tbody td:nth-child(7):before {
-        content: "Jumlah Ambil";
-    }
-    
-    #tblBarang tbody td:nth-child(7) input {
-        width: 65%;
-        font-size: 13px;
-    }
-    
-    #tblBarang tbody td:last-child:before {
-        content: "Aksi";
-    }
-    
-    #tblBarang tbody td:last-child {
-        justify-content: flex-end;
-    }
-    
-    #tblBarang tbody td:last-child button {
-        width: auto;
-        padding: 5px 15px;
-    }
-    
+    /* Tombol submit */
     .btn-group-custom {
         flex-direction: column;
         gap: 8px;
     }
-    
     .btn-group-custom button {
         width: 100%;
-        justify-content: center;
         padding: 10px;
-        font-size: 14px;
+        font-size: 13px;
     }
     
+    /* Modal */
     .modal-dialog {
-        margin: 20px;
+        margin: 15px;
     }
-    
     .modal-content {
         border-radius: 12px;
     }
     
     textarea.form-control {
-        font-size: 14px;
+        font-size: 13px;
         padding: 8px 10px;
     }
     
     .text-muted {
-        font-size: 11px;
-        display: block;
-        margin-top: 10px;
+        font-size: 10px;
+        margin-top: 8px;
     }
     
     .row {
-        margin-right: -10px;
-        margin-left: -10px;
+        margin-right: -8px;
+        margin-left: -8px;
     }
-    
     .col-6, .col-md-3, .col-md-6, .col-12 {
-        padding-right: 10px;
-        padding-left: 10px;
+        padding-right: 8px;
+        padding-left: 8px;
     }
 }
 
-/* Tablet mode */
+/* ========== RESPONSIF TABLET (769px - 1024px) ========== */
 @media only screen and (min-width: 769px) and (max-width: 1024px) {
     #tblBarang {
-        font-size: 13px;
+        font-size: 12px;
     }
-    
-    .barang-gambar {
-        width: 50px;
-        height: 50px;
-    }
-    
+    .barang-gambar { width: 45px; height: 45px; }
     #tblBarang thead th {
-        font-size: 12px;
-        padding: 8px 5px;
+        font-size: 11px;
+        padding: 6px 4px;
     }
-    
     #tblBarang tbody td {
-        font-size: 12px;
-        padding: 8px 5px;
+        font-size: 11px;
+        padding: 6px 4px;
     }
-    
-    .form-control-sm {
-        font-size: 12px;
-    }
-    
-    .btn-tambah-mobile {
-        display: none;
-    }
-    
-    .btn-tambah-desktop {
-        display: inline-flex !important;
-    }
+    .form-control-sm { font-size: 11px; }
+    .btn-tambah-mobile { display: none; }
+    .btn-tambah-desktop { display: inline-block; }
+    #tblBarang td .select2-container { min-width: 120px !important; }
 }
 
-/* Desktop */
+/* ========== DESKTOP (min 1025px) ========== */
 @media only screen and (min-width: 1025px) {
-    #tblBarang {
-        width: 100% !important;
+    #tblBarang { width: 100% !important; }
+    #tblBarang thead { display: table-header-group; }
+    #tblBarang tbody tr { 
+        display: table-row; 
+        border: none; 
+        margin-bottom: 0; 
+        padding: 0; 
+        box-shadow: none; 
     }
-    
-    #tblBarang thead {
-        display: table-header-group;
+    #tblBarang tbody td { 
+        display: table-cell; 
+        border-bottom: 1px solid #dee2e6; 
     }
-    
-    #tblBarang tbody tr {
-        display: table-row;
-        border: none;
-        margin-bottom: 0;
-        padding: 0;
-        box-shadow: none;
-    }
-    
-    #tblBarang tbody td {
-        display: table-cell;
-        border-bottom: 1px solid #dee2e6;
-    }
-    
-    #tblBarang tbody td:before {
-        display: none;
-    }
-    
-    .btn-tambah-mobile {
-        display: none;
-    }
-    
-    .btn-tambah-desktop {
-        display: inline-flex !important;
+    #tblBarang tbody td:before { display: none; }
+    .btn-tambah-mobile { display: none; }
+    .btn-tambah-desktop { display: inline-block; }
+    #tblBarang td .select2-container { 
+        width: 100% !important; 
+        min-width: 180px !important; 
     }
 }
 
-/* Layar sangat kecil */
+/* ========== LAYAR SANGAT KECIL (max 480px) ========== */
 @media only screen and (max-width: 480px) {
-    .card-body {
-        padding: 10px;
-    }
+    .card-body { padding: 8px; }
     
     #tblBarang tbody td {
         flex-wrap: wrap;
-        padding: 8px 5px;
+        padding: 6px 4px;
     }
-    
     #tblBarang tbody td:before {
         width: 100%;
-        margin-bottom: 5px;
+        margin-bottom: 4px;
     }
-    
-    #tblBarang tbody td:nth-child(3) select,
-    #tblBarang tbody td:nth-child(7) input {
-        width: 100%;
-    }
-    
-    #tblBarang tbody td:last-child {
-        justify-content: center;
-    }
+    #tblBarang tbody td:nth-child(3) .select2-container { width: 100% !important; }
+    #tblBarang tbody td:nth-child(7) input { width: 100%; }
+    #tblBarang tbody td:last-child { justify-content: center; }
     
     .btn-group-custom button {
-        font-size: 13px;
+        font-size: 12px;
         padding: 8px;
     }
 }
@@ -519,7 +440,7 @@ $barang_query = mysqli_query($koneksi, "
                         <div class="col-md-6 col-12">
                             <div class="form-group">
                                 <label><i class="fas fa-user"></i> NAMA PENGAMBIL <span class="text-danger">*</span></label>
-                                <select class="form-control" name="id_user" id="id_user" required>
+                                <select class="form-control select2bs4" name="id_user" id="id_user" required style="width:100%;">
                                     <option value="">-- PILIH PENGAMBIL --</option>
                                     <?php while ($user = mysqli_fetch_array($user_query)): ?>
                                         <option value="<?= htmlspecialchars($user['id_user']); ?>">
@@ -531,7 +452,7 @@ $barang_query = mysqli_query($koneksi, "
                         </div>
                         <div class="col-md-3 col-6">
                             <div class="form-group">
-                                <label><i class="fas fa-calendar"></i> TANGGAL PENGAMBILAN</label>
+                                <label><i class="fas fa-calendar"></i> TANGGAL</label>
                                 <input type="date" name="tgl_brg_keluar" id="tgl_brg_keluar" class="form-control" value="<?= date('Y-m-d'); ?>" required>
                             </div>
                         </div>
@@ -567,7 +488,6 @@ $barang_query = mysqli_query($koneksi, "
                     <div class="form-group">
                         <label><i class="fas fa-list"></i> DAFTAR BARANG YANG AKAN DIAMBIL</label>
                         
-                        <!-- Tombol Tambah Barang untuk Mobile (di atas tabel) -->
                         <div class="btn-tambah-mobile">
                             <button type="button" class="btn btn-info btn-block" onclick="tambahBaris()">
                                 <i class="fas fa-plus"></i> TAMBAH BARANG
@@ -584,50 +504,23 @@ $barang_query = mysqli_query($koneksi, "
                                         <th width="20%">Spesifikasi</th>
                                         <th width="10%">Merk</th>
                                         <th width="10%">Stok</th>
-                                        <th width="10%">Jumlah Ambil</th>
+                                        <th width="10%">Jumlah</th>
                                         <th width="10%">
-                                            <!-- Tombol Tambah Barang untuk Desktop (di header tabel) -->
-                                            <button type="button" class="btn-tambah-header" onclick="tambahBaris()" title="Tambah Barang">
-                                                <i class="fas fa-plus"></i> Tambah
+                                            <button type="button" class="btn btn-success btn-sm btn-tambah-desktop" onclick="tambahBaris()">
+                                                <i class="fas fa-plus"></i>
                                             </button>
                                         </th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbodyBarang">
-                                    <!-- Baris 1 -->
                                     <tr id="baris1">
                                         <td class="text-center" data-label="No. Urut">1</td>
                                         <td class="text-center" data-label="Gambar">
-                                            <img src="dist/upload_img/default.png" 
-                                                 class="barang-gambar" 
-                                                 id="gambar_1"
-                                                 alt="Gambar Barang"
-                                                 style="display:none;"
-                                                 onclick="previewGambar(this)">
+                                            <img src="dist/upload_img/default.png" class="barang-gambar" id="gambar_1" alt="Gambar" style="display:none;" onclick="previewGambar(this)">
                                         </td>
                                         <td data-label="Nama Barang">
-                                            <select name="barang_ids[]" class="form-control form-control-sm select-barang" id="select_1" onchange="updateBarang(this, 1)" required>
-                                                <option value="">-- Pilih Barang --</option>
-                                                <?php 
-                                                $barang_query2 = mysqli_query($koneksi, "
-                                                    SELECT b.* 
-                                                    FROM tbl_barang b
-                                                    WHERE b.jumlah_brg > 0
-                                                    ORDER BY b.nama_brg ASC
-                                                ");
-                                                while ($brg = mysqli_fetch_array($barang_query2)): 
-                                                    $stok_tersedia = $brg['jumlah_brg'];
-                                                    $gambar_brg = !empty($brg['gambar_brg']) ? $brg['gambar_brg'] : 'default.png';
-                                                ?>
-                                                    <option value="<?= $brg['id_brg']; ?>" 
-                                                            data-stok="<?= $stok_tersedia; ?>"
-                                                            data-spesifikasi="<?= htmlspecialchars($brg['spesifikasi_brg']); ?>"
-                                                            data-merk="<?= htmlspecialchars($brg['merk_brg']); ?>"
-                                                            data-gambar="<?= $gambar_brg; ?>"
-                                                            data-nama="<?= htmlspecialchars($brg['nama_brg']); ?>">
-                                                        <?= htmlspecialchars($brg['nama_brg']); ?> (Stok: <?= $stok_tersedia; ?>)
-                                                    </option>
-                                                <?php endwhile; ?>
+                                            <select name="barang_ids[]" class="form-control select2-barang" id="select_1" onchange="updateBarang(this, 1)" required style="width:100%;">
+                                                <option value="">-- Cari & Pilih Barang --</option>
                                             </select>
                                         </td>
                                         <td class="spesifikasi-cell" id="spesifikasi_1" data-label="Spesifikasi">-</td>
@@ -637,7 +530,7 @@ $barang_query = mysqli_query($koneksi, "
                                             <input type="number" name="jumlah_ambil[]" class="form-control form-control-sm jumlah-ambil" min="1" value="1" onchange="validasiJumlah(this, 1)">
                                         </td>
                                         <td class="text-center" data-label="Aksi">
-                                            <button type="button" class="btn btn-danger btn-sm" onclick="hapusBaris(this)" title="Hapus">
+                                            <button type="button" class="btn btn-danger btn-sm" onclick="hapusBaris(this)">
                                                 <i class="fas fa-trash"></i> Hapus
                                             </button>
                                         </td>
@@ -646,7 +539,6 @@ $barang_query = mysqli_query($koneksi, "
                             </table>
                         </div>
                         
-                        <!-- Tombol Tambah Barang untuk Mobile (bawah tabel) -->
                         <div class="btn-tambah-mobile" style="margin-top: 10px;">
                             <button type="button" class="btn btn-info btn-block" onclick="tambahBaris()">
                                 <i class="fas fa-plus"></i> TAMBAH BARANG LAGI
@@ -654,18 +546,13 @@ $barang_query = mysqli_query($koneksi, "
                         </div>
                         
                         <small class="text-muted">
-                            <i class="fas fa-info-circle"></i> 
-                            Klik gambar untuk memperbesar. Klik tombol <i class="fas fa-plus text-info"></i> untuk menambah barang.
+                            <i class="fas fa-info-circle"></i> Klik gambar untuk memperbesar. Ketik nama barang di dropdown untuk mencari.
                         </small>
                     </div>
                     
                     <div class="btn-group-custom">
-                        <button type="reset" class="btn btn-default">
-                            <i class="fas fa-undo"></i> Reset
-                        </button>
-                        <button type="submit" name="simpan_ambil" class="btn btn-info">
-                            <i class="fas fa-save"></i> SIMPAN PENGAMBILAN
-                        </button>
+                        <button type="reset" class="btn btn-default"><i class="fas fa-undo"></i> Reset</button>
+                        <button type="submit" name="simpan_ambil" class="btn btn-info"><i class="fas fa-save"></i> SIMPAN PENGAMBILAN</button>
                     </div>
                 </form>
             </div>
@@ -678,151 +565,105 @@ $barang_query = mysqli_query($koneksi, "
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-info text-white">
-                <h5 class="modal-title"><i class="fas fa-image"></i> Preview Gambar Barang</h5>
+                <h5 class="modal-title"><i class="fas fa-image"></i> Preview Gambar</h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body text-center">
-                <img id="previewImg" src="" class="img-fluid rounded" style="max-height: 300px; max-width: 100%;">
+                <img id="previewImg" src="" class="img-fluid rounded" style="max-height: 300px;">
                 <p id="previewNama" class="mt-2 text-muted"></p>
             </div>
         </div>
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
 // Data barang dari PHP
-var dataBarang = {};
-
-<?php 
-$barang_query3 = mysqli_query($koneksi, "
-    SELECT b.* 
-    FROM tbl_barang b
-    WHERE b.jumlah_brg > 0
-    ORDER BY b.nama_brg ASC
-");
-while ($brg = mysqli_fetch_array($barang_query3)): 
-    $stok_tersedia = $brg['jumlah_brg'];
-    $gambar = !empty($brg['gambar_brg']) ? $brg['gambar_brg'] : 'default.png';
-?>
-    dataBarang['<?= $brg['id_brg']; ?>'] = {
-        stok: <?= $stok_tersedia; ?>,
-        spesifikasi: '<?= addslashes($brg['spesifikasi_brg']); ?>',
-        merk: '<?= addslashes($brg['merk_brg']); ?>',
-        gambar: '<?= $gambar; ?>',
-        nama: '<?= addslashes($brg['nama_brg']); ?>'
-    };
-<?php endwhile; ?>
-
+var dataBarang = <?= $barang_json; ?>;
 var barisCount = 1;
 
-// Fungsi preview gambar
-function previewGambar(imgElement) {
-    var gambarUrl = imgElement.src;
-    var namaBarang = imgElement.getAttribute('data-nama') || 'Gambar Barang';
-    document.getElementById('previewImg').src = gambarUrl;
-    document.getElementById('previewNama').innerHTML = namaBarang;
+// Konversi dataBarang array ke object untuk akses cepat
+var dataBarangObj = {};
+dataBarang.forEach(function(item) {
+    dataBarangObj[item.id] = item;
+});
+
+// Fungsi untuk mengisi option dropdown
+function getOptionsHTML(selectedId) {
+    var html = '<option value="">-- Cari & Pilih Barang --</option>';
+    dataBarang.forEach(function(item) {
+        var selected = (item.id == selectedId) ? ' selected' : '';
+        html += '<option value="' + item.id + '" data-stok="' + item.stok + '" data-spesifikasi="' + item.spesifikasi + '" data-merk="' + item.merk + '" data-gambar="' + item.gambar + '" data-nama="' + item.nama + '"' + selected + '>' + item.nama + ' (Stok: ' + item.stok + ')</option>';
+    });
+    return html;
+}
+
+// Isi dropdown baris pertama
+document.getElementById('select_1').innerHTML = getOptionsHTML();
+
+// Preview gambar
+function previewGambar(img) {
+    document.getElementById('previewImg').src = img.src;
+    document.getElementById('previewNama').innerHTML = img.getAttribute('data-nama') || 'Gambar Barang';
     $('#modalPreviewGambar').modal('show');
 }
 
 // Update barang saat dipilih
-function updateBarang(selectElement, rowId) {
-    var idBarang = selectElement.value;
-    var spesifikasiCell = document.getElementById('spesifikasi_' + rowId);
-    var merkCell = document.getElementById('merk_' + rowId);
-    var stokCell = document.getElementById('stok_' + rowId);
-    var jumlahInput = document.querySelector('#baris' + rowId + ' .jumlah-ambil');
-    var gambarImg = document.getElementById('gambar_' + rowId);
+function updateBarang(select, rowId) {
+    var id = select.value;
+    var data = dataBarangObj[id];
     
-    if (idBarang && dataBarang[idBarang]) {
-        var data = dataBarang[idBarang];
-        spesifikasiCell.innerHTML = data.spesifikasi || '-';
-        merkCell.innerHTML = data.merk || '-';
-        stokCell.innerHTML = '<span class="badge badge-info">' + data.stok + '</span>';
-        jumlahInput.max = data.stok;
-        
-        // Set gambar
-        var gambarPath = 'dist/upload_img/' + data.gambar;
-        gambarImg.src = gambarPath;
-        gambarImg.style.display = 'inline-block';
-        gambarImg.setAttribute('data-nama', data.nama);
-        gambarImg.style.cursor = 'pointer';
-        
-        // Validasi jumlah
-        if (parseInt(jumlahInput.value) > data.stok) {
-            jumlahInput.value = data.stok;
-        }
-        if (parseInt(jumlahInput.value) < 1) {
-            jumlahInput.value = 1;
-        }
+    document.getElementById('spesifikasi_' + rowId).innerHTML = data ? (data.spesifikasi || '-') : '-';
+    document.getElementById('merk_' + rowId).innerHTML = data ? (data.merk || '-') : '-';
+    document.getElementById('stok_' + rowId).innerHTML = data ? '<span class="badge badge-info">' + data.stok + '</span>' : '-';
+    
+    var inputJumlah = document.querySelector('#baris' + rowId + ' .jumlah-ambil');
+    var img = document.getElementById('gambar_' + rowId);
+    
+    if (data) {
+        inputJumlah.max = data.stok;
+        img.src = 'dist/upload_img/' + data.gambar;
+        img.style.display = 'inline-block';
+        img.setAttribute('data-nama', data.nama);
+        if (parseInt(inputJumlah.value) > data.stok) inputJumlah.value = data.stok;
+        if (parseInt(inputJumlah.value) < 1) inputJumlah.value = 1;
     } else {
-        spesifikasiCell.innerHTML = '-';
-        merkCell.innerHTML = '-';
-        stokCell.innerHTML = '-';
-        gambarImg.style.display = 'none';
-        gambarImg.src = 'dist/upload_img/default.png';
-        jumlahInput.max = 9999;
+        img.style.display = 'none';
+        img.src = 'dist/upload_img/default.png';
+        inputJumlah.max = 9999;
     }
 }
 
 // Validasi jumlah
-function validasiJumlah(inputElement, rowId) {
-    var selectBarang = document.querySelector('#baris' + rowId + ' .select-barang');
-    var idBarang = selectBarang.value;
-    var jumlah = parseInt(inputElement.value);
+function validasiJumlah(input, rowId) {
+    var select = document.querySelector('#baris' + rowId + ' .select2-barang');
+    var data = dataBarangObj[select.value];
+    var jumlah = parseInt(input.value);
     
-    if (idBarang && dataBarang[idBarang]) {
-        var maxStok = dataBarang[idBarang].stok;
-        if (isNaN(jumlah) || jumlah > maxStok) {
-            alert('Jumlah pengambilan tidak boleh melebihi stok (' + maxStok + ')');
-            inputElement.value = maxStok;
+    if (data) {
+        if (isNaN(jumlah) || jumlah > data.stok) {
+            alert('Jumlah pengambilan tidak boleh melebihi stok (' + data.stok + ')');
+            input.value = data.stok;
         }
-        if (jumlah < 1 || isNaN(jumlah)) {
-            inputElement.value = 1;
-        }
+        if (jumlah < 1 || isNaN(jumlah)) input.value = 1;
     } else if (jumlah < 1 || isNaN(jumlah)) {
-        inputElement.value = 1;
+        input.value = 1;
     }
 }
 
-// Tambah baris baru
+// Tambah baris
 function tambahBaris() {
     barisCount++;
-    var tbody = document.getElementById('tbodyBarang');
-    var newRow = document.createElement('tr');
-    newRow.id = 'baris' + barisCount;
+    var row = document.createElement('tr');
+    row.id = 'baris' + barisCount;
     
-    // Buat option HTML
-    var optionsHtml = '<option value="">-- Pilih Barang --</option>';
-    <?php 
-    $barang_query4 = mysqli_query($koneksi, "
-        SELECT b.* 
-        FROM tbl_barang b
-        WHERE b.jumlah_brg > 0
-        ORDER BY b.nama_brg ASC
-    ");
-    while ($brg = mysqli_fetch_array($barang_query4)): 
-        $stok_tersedia = $brg['jumlah_brg'];
-        $gambar = !empty($brg['gambar_brg']) ? $brg['gambar_brg'] : 'default.png';
-    ?>
-        optionsHtml += '<option value="<?= $brg['id_brg']; ?>" data-stok="<?= $stok_tersedia; ?>" data-spesifikasi="<?= addslashes($brg['spesifikasi_brg']); ?>" data-merk="<?= addslashes($brg['merk_brg']); ?>" data-gambar="<?= $gambar; ?>" data-nama="<?= addslashes($brg['nama_brg']); ?>"><?= addslashes($brg['nama_brg']); ?> (Stok: <?= $stok_tersedia; ?>)</option>';
-    <?php endwhile; ?>
-    
-    newRow.innerHTML = `
+    row.innerHTML = `
         <td class="text-center" data-label="No. Urut">${barisCount}</td>
         <td class="text-center" data-label="Gambar">
-            <img src="dist/upload_img/default.png" 
-                 class="barang-gambar" 
-                 id="gambar_${barisCount}"
-                 alt="Gambar Barang"
-                 style="display:none;cursor:pointer;"
-                 onclick="previewGambar(this)">
+            <img src="dist/upload_img/default.png" class="barang-gambar" id="gambar_${barisCount}" style="display:none;cursor:pointer;" onclick="previewGambar(this)">
         </td>
         <td data-label="Nama Barang">
-            <select name="barang_ids[]" class="form-control form-control-sm select-barang" id="select_${barisCount}" onchange="updateBarang(this, ${barisCount})" required>
-                ${optionsHtml}
+            <select name="barang_ids[]" class="form-control select2-barang" id="select_${barisCount}" onchange="updateBarang(this, ${barisCount})" required style="width:100%;">
+                ${getOptionsHTML()}
             </select>
         </td>
         <td class="spesifikasi-cell" id="spesifikasi_${barisCount}" data-label="Spesifikasi">-</td>
@@ -832,70 +673,66 @@ function tambahBaris() {
             <input type="number" name="jumlah_ambil[]" class="form-control form-control-sm jumlah-ambil" min="1" value="1" onchange="validasiJumlah(this, ${barisCount})">
         </td>
         <td class="text-center" data-label="Aksi">
-            <button type="button" class="btn btn-danger btn-sm" onclick="hapusBaris(this)" title="Hapus">
+            <button type="button" class="btn btn-danger btn-sm" onclick="hapusBaris(this)">
                 <i class="fas fa-trash"></i> Hapus
             </button>
         </td>
     `;
     
-    tbody.appendChild(newRow);
+    document.getElementById('tbodyBarang').appendChild(row);
     
-    // Scroll ke baris baru
-    newRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Inisialisasi Select2 untuk baris baru
+    $('#select_' + barisCount).select2({
+        theme: 'bootstrap4',
+        width: '100%',
+        placeholder: '-- Cari & Pilih Barang --',
+        allowClear: true
+    });
+    
+    // Scroll ke baris baru (hanya di mobile)
+    if (window.innerWidth < 768) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 }
 
 // Hapus baris
-function hapusBaris(button) {
-    var row = button.closest('tr');
+function hapusBaris(btn) {
     var tbody = document.getElementById('tbodyBarang');
-    
     if (tbody.children.length > 1) {
+        var row = btn.closest('tr');
+        $(row).find('.select2-barang').select2('destroy');
         row.remove();
-        // Update nomor urut
-        var rows = tbody.children;
-        for (var i = 0; i < rows.length; i++) {
-            rows[i].cells[0].innerHTML = i + 1;
-        }
+        
+        Array.from(tbody.children).forEach(function(r, i) {
+            r.cells[0].innerHTML = i + 1;
+        });
+        barisCount = tbody.children.length;
     } else {
         alert('Minimal harus ada 1 barang yang diambil!');
     }
 }
 
-// Inisialisasi baris pertama saat halaman load
-$(document).ready(function() {
-    var firstSelect = document.getElementById('select_1');
-    if (firstSelect && firstSelect.value) {
-        updateBarang(firstSelect, 1);
+// Validasi submit
+document.getElementById('formMultiAmbil').addEventListener('submit', function(e) {
+    var rows = document.querySelectorAll('#tbodyBarang .select2-barang');
+    for (var i = 0; i < rows.length; i++) {
+        if (!rows[i].value) {
+            e.preventDefault();
+            alert('Baris ' + (i + 1) + ': Pilih barang terlebih dahulu!');
+            return;
+        }
+    }
+    if (!document.getElementById('id_user').value) {
+        e.preventDefault();
+        alert('Pilih pengambil terlebih dahulu!');
+        return;
+    }
+    if (!document.getElementById('alamat_ruang').value) {
+        e.preventDefault();
+        alert('Pilih alamat ruang terlebih dahulu!');
+        return;
     }
 });
 
-// Validasi sebelum submit
-document.getElementById('formMultiAmbil').addEventListener('submit', function(e) {
-    var rows = document.querySelectorAll('#tbodyBarang tr');
-    var hasEmpty = false;
-    
-    for (var i = 0; i < rows.length; i++) {
-        var select = rows[i].querySelector('.select-barang');
-        if (!select.value) {
-            e.preventDefault();
-            hasEmpty = true;
-            alert('Baris ' + (i + 1) + ': Silakan pilih barang terlebih dahulu!');
-            break;
-        }
-    }
-    
-    // Cek apakah ada user terpilih
-    var idUser = document.getElementById('id_user').value;
-    if (!hasEmpty && !idUser) {
-        e.preventDefault();
-        alert('Silakan pilih pengambil terlebih dahulu!');
-    }
-    
-    // Cek alamat ruang
-    var alamatRuang = document.getElementById('alamat_ruang').value;
-    if (!hasEmpty && !alamatRuang) {
-        e.preventDefault();
-        alert('Silakan pilih alamat ruang terlebih dahulu!');
-    }
-});
+console.log('Pengambilan - Data barang loaded:', dataBarang.length, 'items');
 </script>
