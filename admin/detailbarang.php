@@ -77,6 +77,12 @@ if (isset($_GET['id'])) {
         margin: 10px;
     }
 }
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    position: relative;
+    top: -5px; /* naik 5px */
+}
+
 </style>
 
 <div class="row detail-container">
@@ -235,8 +241,11 @@ if (isset($_GET['id'])) {
 
                     <div class="form-group">
                         <label>NAMA PEMINJAM</label>
-                        <select class="form-control select2" name="id_user" required style="width:100%;">
-                            <option value="">-- PILIH PEMINJAM --</option>
+                        <select class="form-control select2"
+                            name="id_user"
+                            required
+                            style="width:100%; text-align:center;">
+                        <option value="" selected>-- PILIH PEMINJAM --</option>
                             <?php 
                             $use = mysqli_query($koneksi, "SELECT id_user, nama_lengkap FROM tb_user ORDER BY nama_lengkap");
                             while ($p = mysqli_fetch_array($use)) {

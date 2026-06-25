@@ -135,6 +135,29 @@ html, body {
     transform: translateY(-1px);
 }
 
+/* Tombol Cetak */
+.btn-cetak {
+    background: linear-gradient(45deg, #17a2b8, #138496);
+    color: #fff;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    text-decoration: none;
+    transition: 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-right: 5px;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-cetak:hover {
+    background: linear-gradient(45deg, #138496, #0f6674);
+    color: white;
+    transform: translateY(-1px);
+}
+
 /* Tombol Edit & Hapus */
 .btn-edit {
     background: linear-gradient(45deg, #ffc107, #ff9800);
@@ -327,7 +350,7 @@ html, body {
         font-size: 11px;
     }
     
-    .btn-edit, .btn-hapus {
+    .btn-edit, .btn-hapus, .btn-cetak {
         padding: 5px 10px;
         font-size: 11px;
     }
@@ -399,6 +422,42 @@ html, body {
         width: 100% !important;
     }
 }
+
+.col-no {
+    width: 50px;
+}
+
+.col-nama {
+    width: 400px;
+}
+
+.col-id {
+    width: 100px;
+}
+
+.col-barang {
+    width: 300px;
+}
+.col-type {
+    width: 150px;
+}
+.col-merk {
+    width: 150px;
+}
+.col-jumlah {
+    width: 100px;
+}
+.col-tujuan {
+    width: 200px;
+}
+.col-waktu {
+    width: 150px;
+}
+
+.col-aksi {
+    width: 250px;
+}
+
 </style>
 
 <div class="row">
@@ -413,16 +472,16 @@ html, body {
                 <table id="example1" class="table table-bordered table-striped table-hover">
                     <thead>
                         <tr>
-                            <th>NO</th>
-                            <th>NAMA</th>
-                            <th>ID BARANG</th>
-                            <th>NAMA BARANG</th>
-                            <th>TYPE</th>
-                            <th>MERK</th>
-                            <th>JUMLAH</th>
-                            <th>TUJUAN PENGGUNAAN</th>
-                            <th>WAKTU</th>
-                            <th>AKSI</th>
+                        <th class="col-no">NO</th>
+                        <th class="col-nama">NAMA</th>
+                        <th class="col-id">ID BARANG</th>
+                        <th class="col-barang">NAMA BARANG</th>
+                        <th class="col-type">TYPE</th>
+                        <th class="col-merk">MERK</th>
+                        <th class="col-jumlah">JUMLAH</th>
+                        <th class="col-tujuan">TUJUAN PENGGUNAAN</th>
+                        <th class="col-waktu">WAKTU</th>
+                        <th class="col-aksi">AKSI</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -434,7 +493,8 @@ html, body {
                                 b.nama_brg, 
                                 b.spesifikasi_brg, 
                                 b.merk_brg,
-                                a.tujuan_gunabarang
+                                a.tujuan_gunabarang,
+                                a.id_ambil
                             FROM tbl_history h
                             JOIN tb_user u ON h.id_user = u.id_user
                             JOIN tbl_barang b ON h.id_brg = b.id_brg
@@ -457,6 +517,9 @@ html, body {
                                 <td data-label="TUJUAN"><?= htmlspecialchars($row['tujuan_gunabarang'] ?? '-'); ?></td>
                                 <td data-label="WAKTU"><?= date("d-m-Y", strtotime($row['tgl_history'] . " " . $row['waktu_history'])); ?></td>
                                 <td data-label="AKSI">
+                                    <button type="button" class="btn-cetak" onclick="cetakStruk(<?= $row['id_ambil'] ?? 0; ?>)">
+                                        <i class="fas fa-print"></i> Cetak
+                                    </button>
                                     <a href="?page=edit_aktivitas&id=<?= $row['id_history']; ?>" class="btn-edit">
                                         <i class="fas fa-edit"></i> Edit
                                     </a>
@@ -495,6 +558,11 @@ html, body {
 <script>
 let deleteId = null;
 let deleteJumlah = null;
+
+// Fungsi cetak struk
+function cetakStruk(id) {
+    window.open('cetak_struk.php?jenis=ambil&id_ambil=' + id, '_blank');
+}
 
 // Fungsi konfirmasi hapus dengan informasi jumlah
 function confirmDelete(id, jumlah) {

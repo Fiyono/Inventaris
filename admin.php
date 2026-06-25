@@ -280,6 +280,28 @@ $page = isset($_GET['page']) ? $_GET['page'] : 'home';
             font-size: 18px;
             color: #007bff;
         }
+
+        .nav-treeview .nav-link.active {
+            background: rgba(255,255,255,0.15) !important;
+            color: #ffd700 !important;
+            font-weight: normal;
+        }
+
+        .nav-treeview .nav-link.active .nav-icon {
+            color: #ffd700 !important;
+        }
+
+
+        .nav-sidebar .nav-link.active {
+            color: #ffd700 !important; /* kuning */
+            font-weight: normal;
+            background: rgba(255,255,255,0.15) !important;
+        }
+
+        .nav-sidebar .nav-link.active .nav-icon {
+            color: #ffd700 !important;
+        }
+
     </style>
 </head>
 
@@ -320,17 +342,20 @@ $page = isset($_GET['page']) ? $_GET['page'] : 'home';
                             <ul class="nav nav-treeview">
                                 <li class="nav-item">
                                     <a href="?page=master_data" class="nav-link <?= ($page == 'master_data') ? 'active' : '' ?>">
-                                        <i class="far fa-circle nav-icon"></i><p>DATA BARANG</p>
+                                    <i class="<?= ($page == 'master_data') ? 'fas fa-dot-circle' : 'far fa-circle' ?> nav-icon"></i>
+                                    <p>DATA BARANG</p>
                                     </a>
                                 </li>
                                 <li class="nav-item">
                                     <a href="?page=data_user" class="nav-link <?= ($page == 'data_user') ? 'active' : '' ?>">
-                                        <i class="far fa-circle nav-icon"></i><p>DATA USER</p>
+                                    <i class="<?= ($page == 'data_user') ? 'fas fa-dot-circle' : 'far fa-circle' ?> nav-icon"></i>
+                                    <p>DATA USER</p>
                                     </a>
                                 </li>
                                 <li class="nav-item">
                                     <a href="?page=data_kategori" class="nav-link <?= ($page == 'data_kategori') ? 'active' : '' ?>">
-                                        <i class="far fa-circle nav-icon"></i><p>DATA KATEGORI</p>
+                                    <i class="<?= ($page == 'data_kategori') ? 'fas fa-dot-circle' : 'far fa-circle' ?> nav-icon"></i>
+                                    <p>DATA KATEGORI</p>
                                     </a>
                                 </li>
                             </ul>
@@ -345,17 +370,20 @@ $page = isset($_GET['page']) ? $_GET['page'] : 'home';
                             <ul class="nav nav-treeview">
                                 <li class="nav-item">
                                     <a href="?page=aktifitas" class="nav-link <?= ($page == 'aktifitas') ? 'active' : '' ?>">
-                                        <i class="far fa-circle nav-icon"></i><p>RIWAYAT AMBIL</p>
+                                    <i class="<?= ($page == 'aktifitas') ? 'fas fa-dot-circle' : 'far fa-circle' ?> nav-icon"></i>
+                                    <p>RIWAYAT AMBIL</p>
                                     </a>
                                 </li>
                                 <li class="nav-item">
                                     <a href="?page=riwayat_pinjam" class="nav-link <?= ($page == 'riwayat_pinjam') ? 'active' : '' ?>">
-                                        <i class="far fa-circle nav-icon"></i><p>RIWAYAT PINJAM</p>
+                                    <i class="<?= ($page == 'riwayat_pinjam') ? 'fas fa-dot-circle' : 'far fa-circle' ?> nav-icon"></i>
+                                        <p>RIWAYAT PINJAM</p>
                                     </a>
                                 </li>
                                 <li class="nav-item">
                                     <a href="?page=riwayat_tambah" class="nav-link <?= ($page == 'riwayat_tambah') ? 'active' : '' ?>">
-                                        <i class="far fa-circle nav-icon"></i><p>RIWAYAT TAMBAH</p>
+                                    <i class="<?= ($page == 'riwayat_tambah') ? 'fas fa-dot-circle' : 'far fa-circle' ?> nav-icon"></i>
+                                    <p>RIWAYAT TAMBAH</p>
                                     </a>
                                 </li>
                             </ul>

@@ -6,12 +6,12 @@ include "koneksi.php";
 if (isset($_POST['edit_pinjaman'])) {
     $id_pinjaman = (int) $_POST['id_pinjaman'];
     $tujuan_gunabarang = mysqli_real_escape_string($koneksi, $_POST['tujuan_gunabarang']);
-    $tgl_perkiraan_balik = mysqli_real_escape_string($koneksi, $_POST['tgl_perkiraan_balik']);
+    $tgl_kembali = mysqli_real_escape_string($koneksi, $_POST['tgl_kembali']);
     
     $query_update = mysqli_query($koneksi, "
         UPDATE tbl_pinjaman 
         SET tujuan_gunabarang = '$tujuan_gunabarang', 
-            tgl_perkiraan_balik = '$tgl_perkiraan_balik'
+            tgl_kembali = '$tgl_kembali'
         WHERE id_pinjaman = '$id_pinjaman'
     ");
     
@@ -24,45 +24,43 @@ if (isset($_POST['edit_pinjaman'])) {
 
 // Proses Hapus Data
 if (isset($_GET['hapus'])) {
-    $id_pinjaman = (int) $_GET['hapus'];
+    $kode_pinjaman = mysqli_real_escape_string($koneksi, $_GET['hapus']);
     
-    // Mulai transaksi
     mysqli_begin_transaction($koneksi);
     
     try {
-        // Ambil data pinjaman
+        // Ambil semua data pinjaman dengan kode ini
         $query_data = mysqli_query($koneksi, "
             SELECT id_brg, jumlah_pinjam, status 
             FROM tbl_pinjaman 
-            WHERE id_pinjaman = '$id_pinjaman'
+            WHERE kode_pinjaman = '$kode_pinjaman'
         ");
-        $data_pinjam = mysqli_fetch_assoc($query_data);
         
-        if ($data_pinjam && $data_pinjam['status'] == 'Dipinjam') {
-            $id_brg = $data_pinjam['id_brg'];
-            $jumlah_pinjam = $data_pinjam['jumlah_pinjam'];
-            
-            // Kembalikan stok barang
-            mysqli_query($koneksi, "UPDATE tbl_barang SET jumlah_brg = jumlah_brg + $jumlah_pinjam WHERE id_brg = '$id_brg'");
+        while ($data_pinjam = mysqli_fetch_assoc($query_data)) {
+            if ($data_pinjam['status'] == 'Dipinjam') {
+                $id_brg = $data_pinjam['id_brg'];
+                $jumlah_pinjam = $data_pinjam['jumlah_pinjam'];
+                
+                // Kembalikan stok barang
+                mysqli_query($koneksi, "UPDATE tbl_barang SET jumlah_brg = jumlah_brg + $jumlah_pinjam WHERE id_brg = '$id_brg'");
+            }
         }
         
         // Hapus history pengembalian
-        mysqli_query($koneksi, "DELETE FROM tbl_history_pinjam WHERE id_pinjaman = '$id_pinjaman'");
+        mysqli_query($koneksi, "DELETE FROM tbl_history_pinjam WHERE id_pinjaman IN (SELECT id_pinjaman FROM tbl_pinjaman WHERE kode_pinjaman = '$kode_pinjaman')");
         
         // Hapus pinjaman
-        $query_hapus = mysqli_query($koneksi, "DELETE FROM tbl_pinjaman WHERE id_pinjaman = '$id_pinjaman'");
-        if (!$query_hapus) {
-            throw new Exception("Gagal menghapus data");
-        }
+        mysqli_query($koneksi, "DELETE FROM tbl_pinjaman WHERE kode_pinjaman = '$kode_pinjaman'");
         
         mysqli_commit($koneksi);
         echo "<script>alert('Data berhasil dihapus!'); window.location.href='?page=riwayat_pinjam';</script>";
         
     } catch (Exception $e) {
         mysqli_rollback($koneksi);
-        echo "<script>alert('Gagal menghapus data: " . addslashes($e->getMessage()) . "');</script>";
+        echo "<script>alert('Gagal menghapus data!');</script>";
     }
 }
+
 ?>
 
 <link rel="stylesheet" href="assets/css/custom.css">
@@ -628,6 +626,52 @@ html, body {
         display: none;
     }
 }
+
+.col-no {
+    width: 50px;
+}
+
+.col-nama {
+    width: 450px;
+}
+
+.col-id {
+    width: 10px;
+}
+
+.col-barang {
+    width: 340px;
+}
+
+.col-jumlah {
+    width: 120px;
+}
+
+.col-kembali {
+    width: 120px;
+}
+
+.col-sisa {
+    width: 120px;
+}
+
+.col-tujuan {
+    width: 200px;
+}
+
+.col-pinjam {
+    width: 150px;
+}
+
+.col-kembali {
+    width: 150px;
+}
+
+.col-aksi {
+    width: 200px;
+}
+
+
 </style>
 
 <div class="row">
@@ -642,59 +686,63 @@ html, body {
                 <table id="example1" class="table table-sm table-hover table-bordered table-striped">
                     <thead>
                         <tr>
-                            <th>NO</th>
-                            <th>NAMA PEMINJAM</th>
-                            <th>ID BARANG</th>
-                            <th>NAMA BARANG</th>
-                            <th>SPESIFIKASI</th>
-                            <th>MERK</th>
-                            <th>JUMLAH PINJAM</th>
-                            <th>SUDAH KEMBALI</th>
-                            <th>SISA</th>
-                            <th>TUJUAN</th>
-                            <th>TGL PINJAM</th>
-                            <th>PERKIRAAN KEMBALI</th>
-                            <th>AKSI</th>
+                        <th class="col-no">NO</th>
+                        <th class="col-nama">NAMA PEMINJAM</th>
+                        <th class="col-id">ID BARANG</th>
+                        <th class="col-barang">NAMA BARANG</th>
+                            <!-- <th>SPESIFIKASI</th>
+                            <th>MERK</th> -->
+                        <th class="col-jumlah">JUMLAH PINJAM</th>
+                        <th class="col-kembali">SUDAH KEMBALI</th>
+                        <th class="col-sisa">SISA</th>
+                        <th class="col-tujuan">TUJUAN</th>
+                        <th class="col-pinjam">TGL PINJAM</th>
+                        <th class="col-kembali">TGL KEMBALI</th>
+                        <th class="col-aksi">AKSI</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php
+                    <?php
                         $no = 1;
-                        // Ambil data dari tbl_pinjaman (1 peminjaman = 1 baris)
+                        // Ambil data GROUP BY kode_pinjaman (1 transaksi = 1 baris)
                         $sql = mysqli_query($koneksi, "
                             SELECT 
-                                p.id_pinjaman,
-                                p.id_brg,
+                                p.kode_pinjaman,
                                 p.id_user,
                                 p.tgl_pinjam,
-                                p.tgl_perkiraan_balik,
-                                p.jumlah_pinjam,
+                                b.spesifikasi_brg, 
+                                b.merk_brg,
+                                p.tgl_kembali,
                                 p.tujuan_gunabarang,
                                 p.status,
                                 u.nama_lengkap,
-                                b.nama_brg,
-                                b.spesifikasi_brg,
-                                b.merk_brg,
-                                b.id_brg as id_barang,
-                                COALESCE(SUM(h.jumlahbrg_kembali), 0) AS total_kembali
+                                COUNT(DISTINCT p.id_brg) AS total_barang,
+                                SUM(p.jumlah_pinjam) AS total_pinjam,
+                                COALESCE(SUM(h.jumlahbrg_kembali), 0) AS total_kembali,
+                                GROUP_CONCAT(
+                                    CONCAT(b.nama_brg, ' (', p.jumlah_pinjam, ' pcs)')
+                                    SEPARATOR '<br>'
+                                ) AS detail_barang,
+                                GROUP_CONCAT(DISTINCT b.id_brg SEPARATOR ',') AS id_barang_list
                             FROM tbl_pinjaman p
                             JOIN tb_user u ON p.id_user = u.id_user
                             JOIN tbl_barang b ON p.id_brg = b.id_brg
                             LEFT JOIN tbl_history_pinjam h ON h.id_pinjaman = p.id_pinjaman
-                            GROUP BY p.id_pinjaman
-                            ORDER BY p.id_pinjaman DESC
+                            GROUP BY p.kode_pinjaman, p.id_user, p.tgl_pinjam, p.tgl_kembali, p.tujuan_gunabarang, p.status, u.nama_lengkap
+                            ORDER BY MAX(p.id_pinjaman) DESC
                         ");
-                        
+
                         while ($row = mysqli_fetch_assoc($sql)) {
                             $status = $row['status'];
                             $total_kembali = (int)($row['total_kembali'] ?? 0);
-                            $sisa_belum_kembali = $row['jumlah_pinjam'] - $total_kembali;
+                            $total_pinjam = (int)($row['total_pinjam'] ?? 0);
+                            $sisa_belum_kembali = $total_pinjam - $total_kembali;
                             
-                            $tgl_perkiraan = (!empty($row['tgl_perkiraan_balik']) && $row['tgl_perkiraan_balik'] != "0000-00-00")
-                                ? date('d-m-Y', strtotime($row['tgl_perkiraan_balik']))
+                            $tgl_kembali = (!empty($row['tgl_kembali']) && $row['tgl_kembali'] != "0000-00-00")
+                                ? date('d-m-Y', strtotime($row['tgl_kembali']))
                                 : '-';
                             
-                            // Status badge untuk mobile
+                            // Status badge
                             $status_badge = '';
                             if ($status == 'Dipinjam') {
                                 $status_badge = '<span class="badge badge-warning" style="background:#ffc107; color:#333;">Dipinjam</span>';
@@ -704,39 +752,41 @@ html, body {
                         ?>
                             <tr>
                                 <td data-label="NO"><?= $no++; ?></td>
-                                <td data-label="NAMA PEMINJAM"><?= htmlspecialchars($row['nama_lengkap']); ?> </td>
-                                <td data-label="ID BARANG"><?= htmlspecialchars($row['id_barang']); ?></td>
-                                <td data-label="NAMA BARANG"><?= htmlspecialchars($row['nama_brg']); ?></td>
-                                <td data-label="SPESIFIKASI"><?= htmlspecialchars($row['spesifikasi_brg']); ?></td>
-                                <td data-label="MERK"><?= htmlspecialchars($row['merk_brg']); ?></td>
-                                <td data-label="JUMLAH PINJAM"><?= $row['jumlah_pinjam']; ?> pcs</td>
+                                <td data-label="NAMA PEMINJAM"><?= htmlspecialchars($row['nama_lengkap']); ?></td>
+                                <td data-label="ID BARANG"><?= htmlspecialchars($row['id_barang_list'] ?? '-'); ?></td>
+                                <td data-label="NAMA BARANG"><?= $row['detail_barang']; ?></td>
+                                <!-- <td data-label="SPESIFIKASI"><?= htmlspecialchars($row['spesifikasi_brg'] ?? '-'); ?></td>
+                                <td data-label="MERK"><?= htmlspecialchars($row['merk_brg'] ?? '-'); ?></td> -->
+                                <td data-label="JUMLAH PINJAM"><?= $total_pinjam; ?> pcs<br><small>(<?= $row['total_barang']; ?> item)</small></td>
                                 <td data-label="SUDAH KEMBALI"><?= $total_kembali; ?> pcs</td>
                                 <td data-label="SISA">
                                     <?php if ($sisa_belum_kembali > 0 && $status != 'Dikembalikan'): ?>
-                                        <span><?= $sisa_belum_kembali; ?> pcs</span>
+                                        <span style="color: red; font-weight: bold;"><?= $sisa_belum_kembali; ?> pcs</span>
                                     <?php else: ?>
                                         0 pcs
                                     <?php endif; ?>
-                                 </td>
+                                </td>
                                 <td data-label="TUJUAN"><?= htmlspecialchars($row['tujuan_gunabarang'] ?? '-'); ?></td>
                                 <td data-label="TGL PINJAM">
                                     <?= !empty($row['tgl_pinjam']) && $row['tgl_pinjam'] != "0000-00-00"
                                         ? date('d-m-Y', strtotime($row['tgl_pinjam']))
                                         : '-' ?>
-                                 </td>
-                                <td data-label="PERKIRAAN KEMBALI"><?= $tgl_perkiraan; ?></td>
+                                </td>
+                                <td data-label="TGL KEMBALI">
+                                    <?= $tgl_kembali; ?>
+                                </td>
                                 <td data-label="AKSI">
-                                    <button type="button" class="btn-cetak" onclick="cetakStruk(<?= $row['id_pinjaman']; ?>)">
+                                    <button type="button" class="btn-cetak" onclick="cetakStrukPinjam('<?= $row['kode_pinjaman']; ?>')">
                                         <i class="fas fa-print"></i> Cetak
                                     </button>
-                                    <button type="button" class="btn-edit" onclick="showEditModal(
-                                        <?= $row['id_pinjaman']; ?>,
+                                    <button type="button" class="btn-edit" onclick="showEditModalPinjam(
+                                        '<?= $row['kode_pinjaman']; ?>',
                                         '<?= htmlspecialchars($row['tujuan_gunabarang']); ?>',
-                                        '<?= $row['tgl_perkiraan_balik']; ?>'
+                                        '<?= $row['tgl_kembali']; ?>'
                                     )">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
-                                    <button type="button" class="btn-hapus" onclick="confirmDelete(<?= $row['id_pinjaman']; ?>)">
+                                    <button type="button" class="btn-hapus" onclick="confirmDeletePinjam('<?= $row['kode_pinjaman']; ?>')">
                                         <i class="fas fa-trash"></i> Hapus
                                     </button>
                                 </td>
@@ -761,8 +811,8 @@ html, body {
                     <textarea name="tujuan_gunabarang" id="edit_tujuan" class="form-control" rows="3" required></textarea>
                 </div>
                 <div class="form-group">
-                    <label>Tanggal Perkiraan Kembali</label>
-                    <input type="date" name="tgl_perkiraan_balik" id="edit_tgl_perkiraan" class="form-control" required>
+                    <label>Tanggal Kembali</label>
+                    <input type="date" name="tgl_kembali" id="edit_tgl_kembali" class="form-control" required>
                 </div>
                 <div class="modal-buttons">
                     <button type="button" class="btn-edit-cancel" onclick="closeEditModal()">Batal</button>
@@ -796,10 +846,10 @@ html, body {
 let deleteId = null;
 
 // Fungsi show modal edit
-function showEditModal(id, tujuan, tgl_perkiraan) {
+function showEditModal(id, tujuan, tgl_kembali) {
     document.getElementById('edit_id_pinjaman').value = id;
     document.getElementById('edit_tujuan').value = tujuan;
-    document.getElementById('edit_tgl_perkiraan').value = tgl_perkiraan;
+    document.getElementById('edit_tgl_kembali').value = tgl_kembali;
     document.getElementById('editModal').style.display = 'flex';
 }
 
@@ -808,16 +858,23 @@ function closeEditModal() {
     document.getElementById('editModal').style.display = 'none';
 }
 
+let deleteKode = null;
+
+// Fungsi cetak struk
+function cetakStrukPinjam(kode) {
+    window.open('cetak_struk.php?kode=' + kode, '_blank');
+}
+
 // Fungsi konfirmasi hapus
-function confirmDelete(id) {
-    deleteId = id;
+function confirmDeletePinjam(kode) {
+    deleteKode = kode;
     document.getElementById('deleteModal').style.display = 'flex';
 }
 
 // Fungsi hapus data
 function deleteData() {
-    if (deleteId) {
-        window.location.href = '?page=riwayat_pinjam&hapus=' + deleteId;
+    if (deleteKode) {
+        window.location.href = '?page=riwayat_pinjam&hapus=' + deleteKode;
     }
 }
 
@@ -827,10 +884,6 @@ function closeDeleteModal() {
     deleteId = null;
 }
 
-// Fungsi cetak struk
-function cetakStruk(id) {
-    window.open('cetak_struk.php?id=' + id, '_blank');
-}
 
 // Tutup modal jika klik di luar
 document.addEventListener('click', function(event) {

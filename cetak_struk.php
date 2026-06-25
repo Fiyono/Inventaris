@@ -6,18 +6,22 @@ include "koneksi.php";
 $jenis = isset($_GET['jenis']) ? $_GET['jenis'] : 'pinjam'; // pinjam atau ambil
 $id_pinjaman = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $id_ambil = isset($_GET['id_ambil']) ? (int)$_GET['id_ambil'] : 0;
+$kode_pinjaman = isset($_GET['kode']) ? mysqli_real_escape_string($koneksi, $_GET['kode']) : '';
 $data_json = isset($_GET['data']) ? base64_decode(urldecode($_GET['data'])) : '';
 
 $data = null;
 $title = "Struk Peminjaman";
 
+// Debugging (hapus jika sudah berfungsi)
+// echo "DEBUG: jenis=$jenis, kode=$kode_pinjaman, id=$id_pinjaman, data_json=" . (!empty($data_json) ? 'ada' : 'kosong');
+
 // ==================== PEMINJAMAN ====================
 if ($jenis == 'pinjam') {
-    // Jika panggilan via ID (dari riwayat_pinjam)
-    if ($id_pinjaman > 0) {
+    // Jika panggilan via KODE PINJAMAN (dari riwayat_pinjam - MULTIPLE BARANG)
+    if (!empty($kode_pinjaman)) {
         $query = mysqli_query($koneksi, "
             SELECT 
-                p.id_pinjaman,
+                p.kode_pinjaman,
                 p.tgl_pinjam,
                 p.tgl_perkiraan_balik,
                 p.jumlah_pinjam,
@@ -26,21 +30,92 @@ if ($jenis == 'pinjam') {
                 u.nama_lengkap,
                 b.nama_brg,
                 b.spesifikasi_brg,
-                b.merk_brg,
-                COALESCE(SUM(h.jumlahbrg_kembali), 0) AS total_kembali
+                b.merk_brg
             FROM tbl_pinjaman p
             JOIN tb_user u ON p.id_user = u.id_user
             JOIN tbl_barang b ON p.id_brg = b.id_brg
-            LEFT JOIN tbl_history_pinjam h ON h.id_pinjaman = p.id_pinjaman
+            WHERE p.kode_pinjaman = '$kode_pinjaman'
+        ");
+        
+        if (mysqli_num_rows($query) > 0) {
+            $barang_list = [];
+            $total_unit = 0;
+            $total_barang = 0;
+            $tanggal = '';
+            $tgl_kembali = '';
+            $nama_peminjam = '';
+            $tujuan = '';
+            
+            while ($row = mysqli_fetch_assoc($query)) {
+                $barang_list[] = [
+                    'nama' => $row['nama_brg'],
+                    'spesifikasi' => $row['spesifikasi_brg'],
+                    'merk' => $row['merk_brg'],
+                    'jumlah' => $row['jumlah_pinjam']
+                ];
+                $total_unit += $row['jumlah_pinjam'];
+                $total_barang++;
+                
+                // Ambil info dari baris pertama
+                if (empty($tanggal)) {
+                    $tanggal = $row['tgl_pinjam'];
+                    $tgl_kembali = $row['tgl_perkiraan_balik'];
+                    $nama_peminjam = $row['nama_lengkap'];
+                    $tujuan = $row['tujuan_gunabarang'];
+                }
+            }
+            
+            $data = [
+                'nomor' => $kode_pinjaman,
+                'tanggal' => $tanggal,
+                'nama' => $nama_peminjam,
+                'tgl_kembali' => $tgl_kembali,
+                'tujuan' => $tujuan,
+                'alamat_ruang' => '',
+                'total_barang' => $total_barang,
+                'total_unit' => $total_unit,
+                'barang' => $barang_list,
+                'jenis' => 'pinjam'
+            ];
+            $title = "Struk Peminjaman - " . $data['nomor'];
+        }
+    } 
+    // Jika panggilan via ID (dari riwayat_pinjam - SINGLE BARANG)
+    elseif ($id_pinjaman > 0) {
+        $query = mysqli_query($koneksi, "
+            SELECT 
+                p.id_pinjaman,
+                p.kode_pinjaman,
+                p.tgl_pinjam,
+                p.tgl_perkiraan_balik,
+                p.jumlah_pinjam,
+                p.tujuan_gunabarang,
+                p.status,
+                u.nama_lengkap,
+                b.nama_brg,
+                b.spesifikasi_brg,
+                b.merk_brg
+            FROM tbl_pinjaman p
+            JOIN tb_user u ON p.id_user = u.id_user
+            JOIN tbl_barang b ON p.id_brg = b.id_brg
             WHERE p.id_pinjaman = '$id_pinjaman'
-            GROUP BY p.id_pinjaman
         ");
         
         $row = mysqli_fetch_assoc($query);
         
         if ($row) {
+            // Jika ada kode_pinjaman, ambil semua barang dengan kode yang sama
+            if (!empty($row['kode_pinjaman'])) {
+                // Redirect ke versi kode
+                header("Location: cetak_struk.php?jenis=pinjam&kode=" . urlencode($row['kode_pinjaman']));
+                exit;
+            }
+            
+            // Fallback jika tidak ada kode
+            $nomor = !empty($row['kode_pinjaman']) ? $row['kode_pinjaman'] : 'INV/' . str_pad($row['id_pinjaman'], 6, '0', STR_PAD_LEFT);
+            
             $data = [
-                'nomor' => 'INV/' . str_pad($row['id_pinjaman'], 6, '0', STR_PAD_LEFT),
+                'nomor' => $nomor,
                 'tanggal' => $row['tgl_pinjam'],
                 'nama' => $row['nama_lengkap'],
                 'tgl_kembali' => $row['tgl_perkiraan_balik'],
@@ -61,12 +136,15 @@ if ($jenis == 'pinjam') {
             $title = "Struk Peminjaman - " . $data['nomor'];
         }
     } 
+    // Jika panggilan via data JSON (dari peminjaman.php - MULTIPLE BARANG)
     else if (!empty($data_json)) {
         $data = json_decode($data_json, true);
-        $data['jenis'] = 'pinjam';
-        $data['nama'] = $data['peminjam'] ?? '';
-        $data['alamat_ruang'] = '';
-        $title = "Struk Peminjaman - " . $data['nomor'];
+        if ($data) {
+            $data['jenis'] = 'pinjam';
+            $data['nama'] = $data['peminjam'] ?? '';
+            $data['alamat_ruang'] = '';
+            $title = "Struk Peminjaman - " . ($data['nomor'] ?? '');
+        }
     }
 }
 
@@ -117,13 +195,15 @@ else if ($jenis == 'ambil') {
     }
     else if (!empty($data_json)) {
         $data = json_decode($data_json, true);
-        $data['jenis'] = 'ambil';
-        $data['nama'] = $data['pengambil'] ?? '';
-        $title = "Struk Pengambilan - " . $data['nomor'];
+        if ($data) {
+            $data['jenis'] = 'ambil';
+            $data['nama'] = $data['pengambil'] ?? $data['peminjam'] ?? '';
+            $title = "Struk Pengambilan - " . ($data['nomor'] ?? '');
+        }
     }
 }
 
-if (!$data) {
+if (!$data || empty($data['barang'])) {
     echo "<!DOCTYPE html>
     <html>
     <head>
@@ -131,12 +211,21 @@ if (!$data) {
         <style>
             body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
             .error { color: red; }
+            .debug { background: #f8f9fa; padding: 10px; margin: 10px; font-size: 12px; text-align: left; }
         </style>
     </head>
     <body>
         <div class='error'>
             <h2>Error</h2>
             <p>Tidak ada data struk! Silakan lakukan transaksi terlebih dahulu.</p>
+            <div class='debug'>
+                <strong>Debug Info:</strong><br>
+                Jenis: <?= htmlspecialchars($jenis); ?><br>
+                Kode: <?= htmlspecialchars($kode_pinjaman); ?><br>
+                ID Pinjam: <?= $id_pinjaman; ?><br>
+                ID Ambil: <?= $id_ambil; ?><br>
+                Data JSON: <?= !empty($data_json) ? 'Ada' : 'Kosong'; ?>
+            </div>
             <a href='admin.php?page=dashboard'>Kembali ke Dashboard</a>
         </div>
     </body>
@@ -397,12 +486,12 @@ $link_kembali = ($data['jenis'] == 'pinjam') ? 'admin.php?page=riwayat_pinjam' :
         <!-- Total -->
         <div class="total-section">
             <div class="total-row">
-                <div class="total-label">Total Jenis Barang</div>
-                <div class="total-value">: <?= $data['total_barang']; ?> jenis</div>
+                <div class="total-label">Total Item</div>
+                <div class="total-value">: <?= $data['total_barang']; ?> Item</div>
             </div>
             <div class="total-row">
-                <div class="total-label">Total Unit</div>
-                <div class="total-value">: <?= $data['total_unit']; ?> unit</div>
+                <div class="total-label">Total Pcs</div>
+                <div class="total-value">: <?= $data['total_unit']; ?> Pcs</div>
             </div>
         </div>
         

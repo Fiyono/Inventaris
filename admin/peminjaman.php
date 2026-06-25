@@ -21,6 +21,10 @@ if (isset($_POST['simpan_cetak'])) {
     $success_count = 0;
     $list_barang = [];
     
+    // Generate kode transaksi unik
+    $kode_pinjaman = 'PJM/' . date('Ymd') . '/' . strtoupper(substr(uniqid(), -5));
+    $waktu_sekarang = date('H:i:s');
+    
     // Mulai transaksi
     mysqli_begin_transaction($koneksi);
     
@@ -54,10 +58,11 @@ if (isset($_POST['simpan_cetak'])) {
             
             $update_stok = mysqli_query($koneksi, "UPDATE tbl_barang SET jumlah_brg = jumlah_brg - $jml WHERE id_brg = '$id_brg'");
             
+            // INSERT ke tbl_pinjaman DENGAN kode_pinjaman
             $query = "INSERT INTO tbl_pinjaman 
-                      (id_brg, id_user, tgl_pinjam, tgl_perkiraan_balik, jumlah_pinjam, organisasi, tujuan_gunabarang, status) 
+                      (kode_pinjaman, id_brg, id_user, tgl_pinjam, tgl_perkiraan_balik, jumlah_pinjam, organisasi, tujuan_gunabarang, status) 
                       VALUES 
-                      ('$id_brg', '$id_user', '$tgl_pinjam', '$tgl_perkiraan_balik', '$jml', '$organisasi', '$tujuan_gunabarang', 'Dipinjam')";
+                      ('$kode_pinjaman', '$id_brg', '$id_user', '$tgl_pinjam', '$tgl_perkiraan_balik', '$jml', '$organisasi', '$tujuan_gunabarang', 'Dipinjam')";
             mysqli_query($koneksi, $query);
             
             $list_barang[] = [
@@ -67,11 +72,11 @@ if (isset($_POST['simpan_cetak'])) {
                 'jumlah' => $jml
             ];
             
-            $waktu_sekarang = date('H:i:s');
+            // INSERT ke tbl_history DENGAN kode_transaksi
             $q_hist = "INSERT INTO tbl_history
-                       (jenis_aktivitas, id_brg, nama_brg, jumlah_brg, tgl_history, waktu_history, id_user)
+                       (kode_transaksi, jenis_aktivitas, id_brg, nama_brg, jumlah_brg, tgl_history, waktu_history, id_user)
                        VALUES
-                       ('Pinjam', '$id_brg', '{$brg['nama_brg']}', '$jml', '$tgl_pinjam', '$waktu_sekarang', '$id_user')";
+                       ('$kode_pinjaman', 'Pinjam', '$id_brg', '{$brg['nama_brg']}', '$jml', '$tgl_pinjam', '$waktu_sekarang', '$id_user')";
             mysqli_query($koneksi, $q_hist);
             
             $success_count++;
@@ -81,7 +86,7 @@ if (isset($_POST['simpan_cetak'])) {
         
         // Encode data untuk dikirim via URL
         $struk_data = base64_encode(json_encode([
-            'nomor' => 'INV/' . date('Ymd') . '/' . rand(1000, 9999),
+            'nomor' => $kode_pinjaman,
             'tanggal' => $tgl_pinjam,
             'tgl_kembali' => $tgl_perkiraan_balik,
             'peminjam' => $nama_peminjam,
@@ -91,9 +96,9 @@ if (isset($_POST['simpan_cetak'])) {
             'total_unit' => array_sum(array_column($list_barang, 'jumlah'))
         ]));
         
-        // Redirect ke halaman struk (bukan tab baru)
+        // Redirect ke halaman struk
         echo "<script>
-            alert('Berhasil meminjam $success_count barang!');
+            alert('Berhasil meminjam $success_count barang! Kode: $kode_pinjaman');
             window.location.href = 'cetak_struk.php?data=" . urlencode($struk_data) . "';
         </script>";
         exit;
@@ -177,6 +182,38 @@ $barang_query = mysqli_query($koneksi, "
 
 .btn-tambah-mobile {
     display: none;
+}
+
+/* Style Select2 agar search box muncul */
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    position: relative;
+    top: -5px;
+}
+
+.select2-container .select2-selection--single {
+    height: 38px !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 36px !important;
+    padding-left: 12px !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px !important;
+}
+
+.select2-container--bootstrap4 .select2-selection--single {
+    height: 38px !important;
+    border-radius: 8px !important;
+}
+
+.select2-container--bootstrap4 .select2-selection__rendered {
+    line-height: 36px !important;
+}
+
+.select2-container--bootstrap4 .select2-selection__arrow {
+    height: 36px !important;
 }
 
 /* ========== RESPONSIF MOBILE (tanpa mengubah logika) ========== */
@@ -543,9 +580,11 @@ $barang_query = mysqli_query($koneksi, "
                         <div class="col-md-6 col-12">
                             <div class="form-group">
                                 <label><i class="fas fa-user"></i> NAMA PEMINJAM <span class="text-danger">*</span></label>
-                                <select class="form-control" name="id_user" id="id_user" required>
+                                <select class="form-control select2" name="id_user" id="id_user" required style="width:100%;">
                                     <option value="">-- PILIH PEMINJAM --</option>
-                                    <?php while ($user = mysqli_fetch_array($user_query)): ?>
+                                    <?php 
+                                    while ($user = mysqli_fetch_array($user_query)): 
+                                    ?>
                                         <option value="<?= htmlspecialchars($user['id_user']); ?>">
                                             <?= htmlspecialchars($user['nama_lengkap']); ?>
                                         </option>
@@ -616,7 +655,7 @@ $barang_query = mysqli_query($koneksi, "
                                                  onclick="previewGambar(this)">
                                         </td>
                                         <td data-label="Nama Barang">
-                                            <select name="barang_ids[]" class="form-control form-control-sm select-barang" id="select_1" onchange="updateBarang(this, 1)" required>
+                                            <select name="barang_ids[]" class="form-control form-control-sm select-barang select2-barang" id="select_1" onchange="updateBarang(this, 1)" required>
                                                 <option value="">-- Pilih Barang --</option>
                                                 <?php 
                                                 // Reset pointer query
@@ -703,7 +742,6 @@ $barang_query = mysqli_query($koneksi, "
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 // Data barang dari PHP
 var dataBarang = {};
@@ -732,6 +770,29 @@ while ($brg = mysqli_fetch_array($barang_query3)):
 <?php endwhile; ?>
 
 var barisCount = 1;
+
+$(document).ready(function() {
+
+console.log('SELECT2 BARANG JALAN');
+console.log($('.select2-barang').length);
+
+$('.select2').select2({
+    theme: 'bootstrap4',
+    width: '100%'
+});
+
+$('.select2-barang').select2({
+    width: '100%'
+});
+
+
+
+var firstSelect = document.getElementById('select_1');
+if (firstSelect && firstSelect.value) {
+    updateBarang(firstSelect, 1);
+}
+
+});
 
 // Fungsi preview gambar
 function previewGambar(imgElement) {
@@ -839,7 +900,7 @@ function tambahBaris() {
                  onclick="previewGambar(this)">
         </td>
         <td data-label="Nama Barang">
-            <select name="barang_ids[]" class="form-control form-control-sm select-barang" id="select_${barisCount}" onchange="updateBarang(this, ${barisCount})" required>
+            <select name="barang_ids[]" class="form-control form-control-sm select-barang select2-barang" id="select_${barisCount}" onchange="updateBarang(this, ${barisCount})" required>
                 ${optionsHtml}
             </select>
         </td>
@@ -857,6 +918,7 @@ function tambahBaris() {
     `;
     
     tbody.appendChild(newRow);
+    initBarangSelect('#select_' + barisCount);
     
     // Scroll ke baris baru
     newRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -889,14 +951,6 @@ document.getElementById('tgl_pinjam').addEventListener('change', function() {
         var bulan = String(date.getMonth() + 1).padStart(2, '0');
         var hari = String(date.getDate()).padStart(2, '0');
         document.getElementById('tgl_perkiraan_balik').value = tahun + '-' + bulan + '-' + hari;
-    }
-});
-
-// Inisialisasi baris pertama saat halaman load
-$(document).ready(function() {
-    var firstSelect = document.getElementById('select_1');
-    if (firstSelect && firstSelect.value) {
-        updateBarang(firstSelect, 1);
     }
 });
 
